@@ -47,6 +47,7 @@ MODULES = \
 SOURCES = \
   bc2amr.f \
   qinit.f90 \
+  b4step2.f90 \
   $(GEOLIB)/setprob.f90 \
   $(GEOLIB)/topo_update.f90 \
   $(GEOLIB)/cellgridintegrate2.f \
@@ -73,7 +74,6 @@ SOURCES = \
   $(GEOLIB)/flag2refine2.f90  \
   $(GEOLIB)/allowflag.f90  \
   $(AMRLIB)/flagregions2.f90  \
-  $(GEOLIB)/b4step2.f90 \
   $(GEOLIB)/dumpgauge.f \
   $(GEOLIB)/upbnd.f  \
   $(GEOLIB)/tick.f \

@@ -10,21 +10,6 @@ function setplot is called to set the plot parameters.
 import numpy
 from clawpack.visclaw import colormaps
 
-datadir = '/Users/rjl/currents_workshop/4_Seaside_OSU_Model_Lab/comparison_data'
-try:
-    b1 = loadtxt(datadir+'/B1.txt',skiprows=1)
-    g201 = reshape(b1,(9000,4))
-    b4 = loadtxt(datadir+'/B4.txt',skiprows=1)
-    g204 = reshape(b4,(9000,4))
-    b6 = loadtxt(datadir+'/B6.txt',skiprows=1)
-    g206 = reshape(b6,(9000,4))
-    b9 = loadtxt(datadir+'/B9.txt',skiprows=1)
-    g209 = reshape(b9,(9000,4))
-    data_found = True
-except:
-    print "warning: error loading comparison data"
-    data_found = False
-
 
 
 #--------------------------
@@ -62,15 +47,15 @@ def setplot(plotdata):
         gaugetools.plot_gauge_locations(current_data.plotdata, \
              gaugenos='all', format_string='ko', add_labels=True, fontsize=8)
     
-
     #-----------------------------------------
     # Figure for imshow plot
     #-----------------------------------------
     plotfigure = plotdata.new_plotfigure(name='surface', figno=0)
-    plotfigure.kwargs = {'figsize':(14,4)}
+    plotfigure.kwargs = {'figsize':(14,11)}
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes('surface')
+    plotaxes.axescmd = 'subplot(411)'
     plotaxes.title = 'Surface'
     plotaxes.scaled = True
 
@@ -96,10 +81,132 @@ def setplot(plotdata):
     plotitem.contour_levels = [-0.05, -0.01]
     plotitem.amr_contour_colors = ['k']  # color on each level
     plotitem.kwargs = {'linestyles':'solid'}
-    plotitem.amr_contour_show = [0,1,0]
+    plotitem.amr_contour_show = [1,0,0]
     plotitem.celledges_show = 0
     plotitem.patchedges_show = 0
     plotitem.show = True
+
+    #-----------------------------------------
+    # Figure for cross section
+    #-----------------------------------------
+    #plotfigure = plotdata.new_plotfigure(name='cross-section', figno=1)
+    #plotfigure.show = False
+    #plotfigure.kwargs = {'figsize':(14,7)}
+
+    # Set up for axes in this figure:
+    plotaxes = plotfigure.new_plotaxes()
+    plotaxes.axescmd = 'subplot(412)'
+    plotaxes.xlimits = [0,9.75]
+    #plotaxes.ylimits = [-0.05,0.05]
+    plotaxes.title = 'Cross section of surface at y=0.76'
+
+    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
+
+    def xsec(current_data):
+        # Return x value and surface eta at this point, along y=0.76
+        from pylab import find,ravel
+        x = current_data.x
+        y = current_data.y
+        dy = current_data.dy
+        q = current_data.q
+
+        ij = find((y <= 0.76+dy/2.) & (y > 0.76-dy/2.))
+        x_slice = ravel(x)[ij]
+        eta_slice = ravel(q[3,:,:])[ij]
+        return x_slice, eta_slice
+
+
+    plotitem.map_2d_to_1d = xsec
+    plotitem.plotstyle = 'kx'     ## need to be able to set amr_plotstyle
+    plotitem.kwargs = {'markersize':3}
+    plotitem.amr_show = [1]  # plot on all levels
+
+    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
+    #plotitem.show = False
+
+    def xsec_B(current_data):
+        # Return x value and B at this point, along y=0
+        from pylab import find,ravel,where,sqrt
+        x = current_data.x
+        y = current_data.y
+        dy = current_data.dy
+        q = current_data.q
+        h = q[0,:]
+        eta = q[3,:]
+        B = eta - h
+
+        ij = find((y <= 0.76+dy/2.) & (y > 0.76-dy/2.))
+        x_slice = ravel(x)[ij]
+        B_slice = ravel(B)[ij]
+        return x_slice, B_slice
+
+    plotitem.map_2d_to_1d = xsec_B
+    plotitem.plotstyle = 'g+'     ## need to be able to set amr_plotstyle
+    plotitem.kwargs = {'markersize':3}
+    plotitem.amr_show = [1]  # plot on all levels
+
+
+    plotaxes = plotfigure.new_plotaxes()
+    plotaxes.axescmd = 'subplot(413)'
+    plotaxes.xlimits = [0,9.75]
+    plotaxes.ylimits = [0.0,0.2]
+    plotaxes.title = 'u-velocity'
+    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
+
+    def xsec_s(current_data):
+        # Return x value and speed at this point, along y=0
+        from pylab import find,ravel,where,sqrt
+        x = current_data.x
+        y = current_data.y
+        dy = current_data.dy
+        q = current_data.q
+        h = q[0,:]
+        dry_tol = 0.001
+        u = where(h>dry_tol, q[1,:]/h, 0.)
+        v = where(h>dry_tol, q[2,:]/h, 0.)
+        #s = sqrt(u**2 + v**2)
+        #s = s / sqrt(9.81/0.97)  # so comparable to eta
+
+        ij = find((y <= 0.76+dy/2.) & (y > 0.76-dy/2.))
+        x_slice = ravel(x)[ij]
+        #s_slice = ravel(s)[ij]
+        u_slice = ravel(u)[ij]
+        return x_slice, u_slice
+
+    plotitem.map_2d_to_1d = xsec_s
+    plotitem.plotstyle = 'bo'     ## need to be able to set amr_plotstyle
+    plotitem.kwargs = {'markersize':3}
+    plotitem.amr_show = [1]  # plot on all levels
+
+
+    plotaxes = plotfigure.new_plotaxes()
+    plotaxes.axescmd = 'subplot(414)'
+    plotaxes.xlimits = [0,9.75]
+    plotaxes.ylimits = [0.004,0.008]
+    plotaxes.title = 'discharge'
+    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
+
+    def xsec_hu(current_data):
+        # Return x value and discharge at this point, along y=0
+        from pylab import find,ravel,where,sqrt
+        x = current_data.x
+        y = current_data.y
+        dy = current_data.dy
+        q = current_data.q
+        hu = q[1,:]
+        ij = find((y <= 0.76+dy/2.) & (y > 0.76-dy/2.))
+        x_slice = ravel(x)[ij]
+        hu_slice = ravel(hu)[ij]
+        return x_slice, hu_slice
+
+    plotitem.map_2d_to_1d = xsec_hu
+    plotitem.plotstyle = 'bo'     ## need to be able to set amr_plotstyle
+    plotitem.kwargs = {'markersize':3}
+    plotitem.amr_show = [1]  # plot on all levels
+
+
+
+
 
 
     #-----------------------------------------
@@ -136,6 +243,8 @@ def setplot(plotdata):
         B = q[3,:,:] - h
         contour(x,y,B,[-0.05,-0.01],colors='b',linestyles='solid',linewidths=2)
         #print "+++ B: ",B.min(), B.max()
+        if h.min() < 0.003:
+            print "+++ h.min: ",h.min()
 
 
 
@@ -204,96 +313,6 @@ def setplot(plotdata):
     plotitem.patchedges_show = 0
     plotitem.show = True
 
-    #-----------------------------------------
-    # Figure for cross section
-    #-----------------------------------------
-    plotfigure = plotdata.new_plotfigure(name='cross-section', figno=1)
-    #plotfigure.show = False
-    plotfigure.kwargs = {'figsize':(14,4)}
-
-    # Set up for axes in this figure:
-    plotaxes = plotfigure.new_plotaxes()
-    plotaxes.axescmd = 'subplot(211)'
-    plotaxes.xlimits = [0,9.75]
-    plotaxes.ylimits = [-0.05,0.05]
-    plotaxes.title = 'Cross section at y=0'
-
-    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
-
-    def xsec(current_data):
-        # Return x value and surface eta at this point, along y=0
-        from pylab import find,ravel
-        x = current_data.x
-        y = current_data.y
-        dy = current_data.dy
-        q = current_data.q
-
-        ij = find((y <= 0.76+dy/2.) & (y > 0.76-dy/2.))
-        x_slice = ravel(x)[ij]
-        eta_slice = ravel(q[3,:,:])[ij]
-        return x_slice, eta_slice
-
-
-    plotitem.map_2d_to_1d = xsec
-    plotitem.plotstyle = 'kx'     ## need to be able to set amr_plotstyle
-    plotitem.kwargs = {'markersize':3}
-    plotitem.amr_show = [1]  # plot on all levels
-
-    plotaxes = plotfigure.new_plotaxes()
-    plotaxes.axescmd = 'subplot(212)'
-    plotaxes.xlimits = [0,9.75]
-    plotaxes.ylimits = [0.0,0.2]
-    plotaxes.title = 'u-velocity'
-    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
-
-    def xsec_s(current_data):
-        # Return x value and speed at this point, along y=0
-        from pylab import find,ravel,where,sqrt
-        x = current_data.x
-        y = current_data.y
-        dy = current_data.dy
-        q = current_data.q
-        h = q[0,:]
-        dry_tol = 0.001
-        u = where(h>dry_tol, q[1,:]/h, 0.)
-        v = where(h>dry_tol, q[2,:]/h, 0.)
-        #s = sqrt(u**2 + v**2)
-        #s = s / sqrt(9.81/0.97)  # so comparable to eta
-
-        ij = find((y <= dy/2.) & (y > -dy/2.))
-        x_slice = ravel(x)[ij]
-        #s_slice = ravel(s)[ij]
-        u_slice = ravel(u)[ij]
-        return x_slice, u_slice
-
-    plotitem.map_2d_to_1d = xsec_s
-    plotitem.plotstyle = 'bo'     ## need to be able to set amr_plotstyle
-    plotitem.kwargs = {'markersize':3}
-    plotitem.amr_show = [1]  # plot on all levels
-
-    plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
-    plotitem.show = False
-
-    def xsec_B(current_data):
-        # Return x value and B at this point, along y=0
-        from pylab import find,ravel,where,sqrt
-        x = current_data.x
-        y = current_data.y
-        dy = current_data.dy
-        q = current_data.q
-        h = q[0,:]
-        eta = q[3,:]
-        B = eta - h
-
-        ij = find((y <= dy/2.) & (y > -dy/2.))
-        x_slice = ravel(x)[ij]
-        B_slice = ravel(B)[ij]
-        return x_slice, B_slice
-
-    plotitem.map_2d_to_1d = xsec_B
-    plotitem.plotstyle = 'g+'     ## need to be able to set amr_plotstyle
-    plotitem.kwargs = {'markersize':3}
-    plotitem.amr_show = [1]  # plot on all levels
 
 
     #-----------------------------------------

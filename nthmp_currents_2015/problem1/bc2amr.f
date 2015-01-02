@@ -81,6 +81,7 @@ c
 c ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::;
 
       use amr_module, only: mthbc
+      use geoclaw_module, only: grav
 
       implicit double precision (a-h,o-z)
 
@@ -111,10 +112,24 @@ c
   100 continue
 c     # constant discharge
       do j = 1,ncol
+         h0 = 0.054d0
+         amu0 = 0.054d0 * 0.115d0 ! discharge
+         dmu = val(2,nxl+1,j) - amu0
+         hr = val(1,nxl+1,j)
+         alpha = abs(dmu) / dsqrt(grav * hr)
+         !write(6,*) '+++ dmu, hr, alpha:',dmu, hr, alpha
+         if (hr > h0) then
+            hl = hr - alpha
+           else
+            hl = hr + alpha
+           endif 
+
          do i=1,nxl
             aux(1,i,j) = -0.054d0
-            val(1,i,j) = 0.054d0
-            val(2,i,j) = val(1,i,j) * 0.115d0
+            !val(1,i,j) = 0.054d0
+            !val(2,i,j) = 0.054d0 * 0.115d0
+            val(1,i,j) = hl
+            val(2,i,j) = amu0
             val(3,i,j) = 0.d0
             enddo
          enddo
