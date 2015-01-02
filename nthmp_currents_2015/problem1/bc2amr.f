@@ -110,26 +110,21 @@ c
       go to (100,110,120,130) mthbc(1)+1
 c
   100 continue
-c     # constant discharge
+c     # constant h=h0 at inflow boundary
+c     # choose hul so that (h0, hul) is connected to (hr, hur) by 2-wave
       do j = 1,ncol
          h0 = 0.054d0
-         amu0 = 0.054d0 * 0.115d0 ! discharge
-         dmu = val(2,nxl+1,j) - amu0
+         hur = val(2,nxl+1,j)
          hr = val(1,nxl+1,j)
-         alpha = abs(dmu) / dsqrt(grav * hr)
-         !write(6,*) '+++ dmu, hr, alpha:',dmu, hr, alpha
-         if (hr > h0) then
-            hl = hr - alpha
-           else
-            hl = hr + alpha
-           endif 
+         alpha = hr - h0
+         hul = hur - alpha*dsqrt(grav*0.5d0*(h0+hr))
 
          do i=1,nxl
             aux(1,i,j) = -0.054d0
             !val(1,i,j) = 0.054d0
             !val(2,i,j) = 0.054d0 * 0.115d0
-            val(1,i,j) = hl
-            val(2,i,j) = amu0
+            val(1,i,j) = h0
+            val(2,i,j) = hul
             val(3,i,j) = 0.d0
             enddo
          enddo

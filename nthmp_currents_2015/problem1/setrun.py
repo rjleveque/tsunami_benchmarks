@@ -357,7 +357,7 @@ def setgeo(rundata):
     geo_data.dry_tolerance = 1.e-3
     geo_data.friction_forcing = True
     geo_data.manning_coefficient =  0.01
-    geo_data.friction_depth = 20.0
+    geo_data.friction_depth = 0.05
 
     # Refinement data
     refinement_data = rundata.refinement_data

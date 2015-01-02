@@ -51,11 +51,12 @@ def setplot(plotdata):
     # Figure for imshow plot
     #-----------------------------------------
     plotfigure = plotdata.new_plotfigure(name='surface', figno=0)
-    plotfigure.kwargs = {'figsize':(14,11)}
+    plotfigure.kwargs = {'figsize':(14,10)}
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes('surface')
-    plotaxes.axescmd = 'subplot(411)'
+    plotaxes.axescmd = 'subplot(311)'
+    #plotaxes.axescmd = 'axes([.1,.7,.8,.2])'
     plotaxes.title = 'Surface'
     plotaxes.scaled = True
 
@@ -95,9 +96,9 @@ def setplot(plotdata):
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.axescmd = 'subplot(412)'
-    plotaxes.xlimits = [0,9.75]
-    #plotaxes.ylimits = [-0.05,0.05]
+    plotaxes.axescmd = 'subplot(312)'
+    plotaxes.xlimits = [0,12]
+    plotaxes.ylimits = [-0.03,0.01]
     plotaxes.title = 'Cross section of surface at y=0.76'
 
     plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
@@ -147,9 +148,9 @@ def setplot(plotdata):
 
 
     plotaxes = plotfigure.new_plotaxes()
-    plotaxes.axescmd = 'subplot(413)'
-    plotaxes.xlimits = [0,9.75]
-    plotaxes.ylimits = [0.0,0.2]
+    plotaxes.axescmd = 'subplot(313)'
+    plotaxes.xlimits = [0,12]
+    plotaxes.ylimits = [-0.2,0.3]
     plotaxes.title = 'u-velocity'
     plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
 
@@ -180,8 +181,9 @@ def setplot(plotdata):
 
 
     plotaxes = plotfigure.new_plotaxes()
+    plotaxes.show = False
     plotaxes.axescmd = 'subplot(414)'
-    plotaxes.xlimits = [0,9.75]
+    plotaxes.xlimits = [0,12]
     plotaxes.ylimits = [0.004,0.008]
     plotaxes.title = 'discharge'
     plotitem = plotaxes.new_plotitem(plot_type='1d_from_2d_data')
