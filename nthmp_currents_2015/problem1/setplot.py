@@ -59,6 +59,7 @@ def setplot(plotdata):
     #plotaxes.axescmd = 'axes([.1,.7,.8,.2])'
     plotaxes.title = 'Surface'
     plotaxes.scaled = True
+    plotaxes.xlimits = [0,9.5]
 
     cmap = colormaps.make_colormap({0:[0.5,1,0.5],0.01:[0,1,1], \
                                     0.2:[0,0,1], 0.5:[1,1,0],  0.8:[1,0,0], \
@@ -72,6 +73,7 @@ def setplot(plotdata):
     plotitem.imshow_cmin = -0.003
     plotitem.imshow_cmax = 0.003
     plotitem.add_colorbar = True
+    plotitem.colorbar_shrink = 0.6
     plotitem.amr_celledges_show = [0]
     plotitem.amr_patchedges_show = [0]
 
@@ -82,7 +84,7 @@ def setplot(plotdata):
     plotitem.contour_levels = [-0.05, -0.01]
     plotitem.amr_contour_colors = ['k']  # color on each level
     plotitem.kwargs = {'linestyles':'solid'}
-    plotitem.amr_contour_show = [1,0,0]
+    plotitem.amr_contour_show = [0,1]
     plotitem.celledges_show = 0
     plotitem.patchedges_show = 0
     plotitem.show = True
@@ -216,7 +218,7 @@ def setplot(plotdata):
     #-----------------------------------------
 
     plotfigure = plotdata.new_plotfigure(name='quiver', figno=8)
-    #plotfigure.show = False
+    plotfigure.show = False
     plotfigure.kwargs = {'figsize':(14,8)}
 
     def speed(current_data):
@@ -240,7 +242,7 @@ def setplot(plotdata):
         dry_tol = 0.001
         u = where(h>dry_tol, q[1,:,:]/h, 0.) #  - 0.115 # for relative vel.
         v = where(h>dry_tol, q[2,:,:]/h, 0.)
-        c = 5  # coarsening factor
+        c = 8  # coarsening factor
         quiver(x[::c,::c],y[::c,::c],u[::c,::c],v[::c,::c],scale=10)
         B = q[3,:,:] - h
         contour(x,y,B,[-0.05,-0.01],colors='b',linestyles='solid',linewidths=2)
@@ -259,13 +261,83 @@ def setplot(plotdata):
     # Water
     plotitem = plotaxes.new_plotitem(plot_type='2d_imshow')
     plotitem.plot_var = speed
-    plotitem.imshow_cmap = colormaps.white_red
+    #plotitem.imshow_cmap = colormaps.white_red
+    #plotitem.imshow_cmap = colormaps.yellow_red_blue
+    plotitem.imshow_cmap = \
+           colormaps.make_colormap({0:[1,1,1],0.5:[0.5,0.5,1],1:[1,0.3,0.3]})
     plotitem.imshow_cmin = 0.
-    plotitem.imshow_cmax = 0.5
+    plotitem.imshow_cmax = 0.23
     plotitem.add_colorbar = True
     plotitem.amr_celledges_show = [0]
     plotitem.amr_patchedges_show = [0]
     plotitem.afterpatch = plot_quiver
+
+
+
+
+    #-----------------------------------------
+    # Figure for vorticity plot
+    #-----------------------------------------
+
+    plotfigure = plotdata.new_plotfigure(name='vorticity', figno=9)
+    #plotfigure.show = False
+    #plotfigure.kwargs = {'figsize':(16,6)}
+    plotfigure.kwargs = {'figsize':(16,12)}
+
+
+    # Set up for axes in this figure:
+    plotaxes = plotfigure.new_plotaxes()
+    plotaxes.axescmd = 'subplot(211)'
+    plotaxes.title = 'Vorticity'
+    plotaxes.scaled = True
+    plotaxes.xlimits = [4.5,9.5]
+
+    # Water
+    plotitem = plotaxes.new_plotitem(plot_type='2d_imshow')
+    plotitem.plot_var = 4
+    plotitem.imshow_cmap = colormaps.blue_white_red
+    plotitem.imshow_cmin = -0.5
+    plotitem.imshow_cmax = 0.5
+    plotitem.add_colorbar = True
+    plotitem.colorbar_shrink = 0.6
+    plotitem.amr_celledges_show = [0]
+    plotitem.amr_patchedges_show = [0]
+    #plotitem.afterpatch = plot_quiver
+
+    # Add contour lines of bathymetry:
+    plotitem = plotaxes.new_plotitem(plot_type='2d_contour')
+    plotitem.plot_var = geoplot.topo
+    from numpy import arange, linspace
+    plotitem.contour_levels = [-0.05, -0.01]
+    plotitem.amr_contour_colors = ['k']  # color on each level
+    plotitem.kwargs = {'linestyles':'solid'}
+    plotitem.amr_contour_show = [0,1]
+    plotitem.celledges_show = 0
+    plotitem.patchedges_show = 0
+    plotitem.show = True
+
+    # Set up for axes for velocity
+    plotaxes = plotfigure.new_plotaxes()
+    plotaxes.axescmd = 'subplot(212)'
+    plotaxes.title = 'Velocity'
+    plotaxes.scaled = True
+    plotaxes.xlimits = [4.5,9.5]
+
+    # Water
+    plotitem = plotaxes.new_plotitem(plot_type='2d_imshow')
+    plotitem.plot_var = speed
+    #plotitem.imshow_cmap = colormaps.white_red
+    #plotitem.imshow_cmap = colormaps.yellow_red_blue
+    plotitem.imshow_cmap = \
+           colormaps.make_colormap({0:[1,1,1],0.5:[0.5,0.5,1],1:[1,0.3,0.3]})
+    plotitem.imshow_cmin = 0.
+    plotitem.imshow_cmax = 0.115 * 2
+    plotitem.add_colorbar = True
+    plotitem.colorbar_shrink = 0.6
+    plotitem.amr_celledges_show = [0]
+    plotitem.amr_patchedges_show = [0]
+    plotitem.afterpatch = plot_quiver
+
 
 
     #-----------------------------------------
@@ -310,7 +382,7 @@ def setplot(plotdata):
     plotitem.contour_levels = [0.08]
     plotitem.amr_contour_colors = ['k']  # color on each level
     plotitem.kwargs = {'linestyles':'solid'}
-    plotitem.amr_contour_show = [0,0,1]
+    plotitem.amr_contour_show = [0,1]
     plotitem.celledges_show = 0
     plotitem.patchedges_show = 0
     plotitem.show = True

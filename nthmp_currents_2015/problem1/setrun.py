@@ -57,7 +57,7 @@ def setrun(claw_pkg='geoclaw'):
 
     # Lower and upper edge of computational domain:
     clawdata.lower[0] = 0.0
-    clawdata.upper[0] = 9.84
+    clawdata.upper[0] = 19.76  #9.84
 
     clawdata.lower[1] = 0.
     clawdata.upper[1] = 1.52
@@ -65,8 +65,8 @@ def setrun(claw_pkg='geoclaw'):
 
 
     # Number of grid cells: Coarsest grid
-    clawdata.num_cells[0] = 200
-    clawdata.num_cells[1] = 40
+    clawdata.num_cells[0] = 260
+    clawdata.num_cells[1] = 20
 
 
     # ---------------
@@ -123,8 +123,8 @@ def setrun(claw_pkg='geoclaw'):
 
     elif clawdata.output_style == 3:
         # Output every iout timesteps with a total of ntot time steps:
-        clawdata.output_step_interval = 1
-        clawdata.total_steps = 1
+        clawdata.output_step_interval = 20
+        clawdata.total_steps = 40
         clawdata.output_t0 = True
         
 
@@ -168,7 +168,7 @@ def setrun(claw_pkg='geoclaw'):
     clawdata.cfl_max = 1.0
 
     # Maximum number of time steps to allow between output times:
-    clawdata.steps_max = 5000
+    clawdata.steps_max = 100000
 
 
 
@@ -261,9 +261,9 @@ def setrun(claw_pkg='geoclaw'):
     amrdata.amr_levels_max = 2
 
     # List of refinement ratios at each level (length at least mxnest-1)
-    amrdata.refinement_ratios_x = [4,5,2,2]
-    amrdata.refinement_ratios_y = [4,5,2,2]
-    amrdata.refinement_ratios_t = [4,5,2,2]
+    amrdata.refinement_ratios_x = [8]
+    amrdata.refinement_ratios_y = [8]
+    amrdata.refinement_ratios_t = [8]
 
 
     # Specify type of each aux variable in amrdata.auxtype.
@@ -278,7 +278,7 @@ def setrun(claw_pkg='geoclaw'):
     amrdata.flag2refine = True
 
     # steps to take on each level L between regriddings of level L+1:
-    amrdata.regrid_interval = 3
+    amrdata.regrid_interval = 100000   # fixed grids
 
     # width of buffer zone around flagged points:
     # (typically the same as regrid_interval so waves don't escape):
@@ -311,6 +311,7 @@ def setrun(claw_pkg='geoclaw'):
     regions = rundata.regiondata.regions
     # to specify regions of refinement append lines of the form
     #  [minlevel,maxlevel,t1,t2,x1,x2,y1,y2]
+    regions.append([1, 1, 0., 1e9, 0., 100., 0., 2.])
     regions.append([2, 2, 0., 1e9, 3., 10., 0., 2.])
 
     # == setgauges.data values ==

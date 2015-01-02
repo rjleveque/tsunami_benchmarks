@@ -8,10 +8,10 @@ def maketopo():
     """
     Output topography files
     """
-    nxpoints = 101
+    nxpoints = 201
     nypoints = 21
     xlower = 0.
-    xupper = 9.84
+    xupper = 20.
     ylower = 0.
     yupper = 1.52
     outfile= "domain.tt1"

@@ -48,6 +48,7 @@ SOURCES = \
   bc2amr.f \
   qinit.f90 \
   b4step2.f90 \
+  valout_vorticity.f \
   $(GEOLIB)/setprob.f90 \
   $(GEOLIB)/topo_update.f90 \
   $(GEOLIB)/cellgridintegrate2.f \
@@ -62,7 +63,6 @@ SOURCES = \
   $(GEOLIB)/step2.f90 \
   $(GEOLIB)/flux2fw.f \
   $(GEOLIB)/qad.f \
-  $(GEOLIB)/valout.f \
   $(GEOLIB)/filval.f90 \
   $(GEOLIB)/filpatch.f90 \
   $(AMRLIB)/prefilp.f90 \
