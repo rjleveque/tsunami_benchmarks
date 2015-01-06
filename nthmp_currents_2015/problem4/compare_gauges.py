@@ -47,7 +47,7 @@ b9a = reshape(b9,(9000,4))
 
 
 plotdata = ClawPlotData()
-plotdata.outdir = '_output'
+plotdata.outdir = '_output_3'
 
 figure(50,figsize=(8,12))
 clf()
@@ -93,7 +93,8 @@ for bnum,ba in zip([1,4,6,9], [b1a,b4a,b6a,b9a]):
     plot(g.t, g.q[1,:],'r',label='GeoClaw')
     xlim(20,40)
     ylabel('depth (m)')
-    text(22,.05,'B%s' % bnum, fontsize=15)
+    ymid = array(gca().get_ylim()).mean()
+    text(22,ymid,'B%s' % bnum, fontsize=15)
     if subp==1: title('Depth')
 
     figure(200+bnum)
@@ -117,7 +118,8 @@ for bnum,ba in zip([1,4,6,9], [b1a,b4a,b6a,b9a]):
     plot(g.t, u, 'r')
     xlim(20,40)
     ylabel('m/s')
-    text(22,.5,'B%s' % bnum, fontsize=15)
+    ymid = array(gca().get_ylim()).mean()
+    text(22,ymid,'B%s' % bnum, fontsize=15)
     #if subp==1: title('Speed')
     if subp==1: title('u-velocity')
 
@@ -137,7 +139,8 @@ for bnum,ba in zip([1,4,6,9], [b1a,b4a,b6a,b9a]):
     plot(g.t, hss, 'r',label='GeoClaw')
     xlim(20,40)
     ylabel('m^3/s^2')
-    text(22,.05,'B%s' % bnum, fontsize=15)
+    ymid = array(gca().get_ylim()).mean()
+    text(22,ymid,'B%s' % bnum, fontsize=15)
     if subp==1: title('Momentum flux')
 
 if 0:
