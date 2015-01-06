@@ -210,11 +210,14 @@ c            # Need to augment q with eta:
 c            # NOTE: we are writing out ghost cell data also, unlike ascii
              write(matunit4) qetav
 
-             deallocate(u,v,vorticity,qetav)
+             deallocate(qetav)
              endif
 
-            mptr = node(levelptr, mptr)
-            go to 70
+          deallocate(u,v,vorticity)
+
+          mptr = node(levelptr, mptr)
+          go to 70
+          
  80      level = level + 1
          go to 65
 
