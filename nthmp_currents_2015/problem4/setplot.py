@@ -160,6 +160,7 @@ def setplot(plotdata):
     # Figure for cross section
     #-----------------------------------------
     plotfigure = plotdata.new_plotfigure(name='cross-section', figno=1)
+    plotfigure.show = False
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes()
