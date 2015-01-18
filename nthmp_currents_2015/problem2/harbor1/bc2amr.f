@@ -275,7 +275,6 @@ c
       go to (400,410,420,430) mthbc(4)+1
 c
   400 continue
-c     write(6,*) '+++ dh_star, dmu_star in bc:',dh_star,dmu_star
       do j=jbeg,ncol
          do i=1,nrow
             do m=1,meqn
@@ -286,10 +285,7 @@ c     write(6,*) '+++ dh_star, dmu_star in bc:',dh_star,dmu_star
                 h_int = val(1,i,jbeg-1)  ! interior value of depth
                 val(1,i,j) = h_int + dh_star
                 amu_int = val(3,i,jbeg-1)  ! interior value of momentum
-                val(3,i,j) = amu_int + dmu_star
-c               if (i==nrow) then
-c                   write(6,*) '+++ bc val3 = ',val(3,i,j)
-c                   endif
+                val(3,i,j) = amu_int - dh_star*dsqrt(-grav*aux(1,i,j))
               else
                 val(1,i,j) = 0.d0
               endif
