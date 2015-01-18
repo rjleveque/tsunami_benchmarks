@@ -199,8 +199,8 @@ def setplot(plotdata):
     # plotitem.plot_var = geoplot.surface
     plotitem.plot_var = geoplot.surface_or_depth
     plotitem.imshow_cmap = geoplot.tsunami_colormap
-    plotitem.imshow_cmin = -0.8
-    plotitem.imshow_cmax = 0.8
+    plotitem.imshow_cmin = -2.0
+    plotitem.imshow_cmax = 2.0
     plotitem.add_colorbar = True
     plotitem.amr_celledges_show = [0,0,0]
     plotitem.patchedges_show = 1
