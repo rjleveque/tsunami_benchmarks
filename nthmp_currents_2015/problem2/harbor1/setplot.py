@@ -216,6 +216,8 @@ def setplot(plotdata):
     plotitem.patchedges_show = 0
     #plotaxes.xlimits = [204.9003, 204.965]
     #plotaxes.ylimits = [19.71, 19.91]
+    plotaxes.xlimits = [204.905,204.965]
+    plotaxes.ylimits = [19.71, 19.758]
 
 
     # add contour lines of bathy if desired:
@@ -244,8 +246,10 @@ def setplot(plotdata):
     plotaxes = plotfigure.new_plotaxes()
     plotaxes.title = 'Vorticity'
     plotaxes.scaled = True
-    #plotaxes.xlimits = [4.5,9.5]
-    plotaxes.ylimits = [19.7, 19.8]
+    #plotaxes.xlimits = [204.905,204.965]
+    plotaxes.xlimits = [204.905,204.95]
+    plotaxes.ylimits = [19.71, 19.758]
+    #plotaxes.ylimits = [19.71, 19.75]
 
     # Water
     plotitem = plotaxes.new_plotitem(plot_type='2d_imshow')
@@ -271,6 +275,17 @@ def setplot(plotdata):
     plotitem.patchedges_show = 0
     plotitem.show = True
 
+    def fixup(current_data):
+        import pylab
+        addgauges(current_data)
+        t = current_data.t
+        t = t / 3600.  # hours
+        pylab.title('Vorticity at %4.2f hours' % t, fontsize=20)
+        pylab.ticklabel_format(format='plain',useOffset=False)
+        mean_lat = 19.7
+        pylab.gca().set_aspect(1.0 / pylab.cos(pylab.pi / 180.0 * mean_lat))
+        pylab.xticks(rotation=20)
+    plotaxes.afteraxes = fixup
 
     #-----------------------------------------
     # Figure for velocity plot
