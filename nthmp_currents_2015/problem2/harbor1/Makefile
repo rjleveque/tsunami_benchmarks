@@ -49,7 +49,8 @@ MODULES = \
 SOURCES = \
   bc2amr.f \
   ../../problem1/valout_vorticity.f \
-  $(GEOLIB)/setprob.f90 \
+  advanc.f \
+  setprob.f90 \
   $(GEOLIB)/qinit.f90 \
   $(GEOLIB)/topo_update.f90 \
   $(GEOLIB)/cellgridintegrate2.f \
@@ -83,7 +84,6 @@ SOURCES = \
   $(GEOLIB)/gfixup.f \
   $(GEOLIB)/ginit.f \
   $(GEOLIB)/getmaxspeed.f90 \
-  $(GEOLIB)/advanc.f \
   $(GEOLIB)/amr2.f90 \
   $(GEOLIB)/fgmax_read.f90 \
   $(GEOLIB)/fgmax_frompatch.f90 \

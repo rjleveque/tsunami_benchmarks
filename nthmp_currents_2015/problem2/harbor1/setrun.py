@@ -63,14 +63,14 @@ def setrun(claw_pkg='geoclaw'):
     clawdata.num_dim = num_dim
     
     # Lower and upper edge of computational domain:
-    clawdata.lower[0] = 204.905         # xlower
-    clawdata.upper[0] = 204.965        # xupper
+    clawdata.lower[0] = 204.905      # xlower
+    clawdata.upper[0] = 204.965      # xupper
     clawdata.lower[1] = 19.71        # ylower
-    clawdata.upper[1] = 19.91    #19.77388         # yupper
+    clawdata.upper[1] = 19.758       # yupper
     
     # Number of grid cells:
-    clawdata.num_cells[0] = 54 # 4-sec    # 324     # mx
-    clawdata.num_cells[1] = 180                      # my
+    clawdata.num_cells[0] = 108 # 2-sec    # mx
+    clawdata.num_cells[1] = 88             # my
     
 
     # ---------------
@@ -117,8 +117,8 @@ def setrun(claw_pkg='geoclaw'):
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
-        clawdata.num_output_times = 18
-        clawdata.tfinal = 3*3600.
+        clawdata.num_output_times = 24
+        clawdata.tfinal = 6*3600.
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     elif clawdata.output_style == 2:
@@ -129,7 +129,7 @@ def setrun(claw_pkg='geoclaw'):
     elif clawdata.output_style == 3:
         # Output every step_interval timesteps over total_steps timesteps:
         clawdata.output_step_interval = 1
-        clawdata.total_steps = 1
+        clawdata.total_steps = 10
         clawdata.output_t0 = False  # output at initial (or restart) time?
         
 
@@ -343,7 +343,7 @@ def setrun(claw_pkg='geoclaw'):
     regions = rundata.regiondata.regions 
 
     regions.append([1, 1, 0., 1e9, 0, 360, -90, 90])
-    regions.append([1, 2, 0., 1e9, 204.9, 205., 19.7, 19.76])
+    regions.append([1, 2, 0., 1e9, 204.9, 205., 19.7, 19.75])
     
 
 
@@ -388,10 +388,10 @@ def setgeo(rundata):
     geo_data.coriolis_forcing = False
 
     # == Algorithm and Initial Conditions ==
-    geo_data.sea_level = 0.0
+    geo_data.sea_level = -0.13
     geo_data.dry_tolerance = 0.001
     geo_data.friction_forcing = True
-    geo_data.manning_coefficient = 0.035
+    geo_data.manning_coefficient = 0.025
     geo_data.friction_depth = 500.0
 
     # Refinement settings

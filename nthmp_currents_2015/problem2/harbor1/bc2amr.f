@@ -81,11 +81,16 @@ c
 c ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::;
 
       use amr_module, only: mthbc
+      use geoclaw_module, only: grav
 
       implicit double precision (a-h,o-z)
 
       dimension val(meqn,nrow,ncol), aux(naux,nrow,ncol)
       logical xperiodic, yperiodic, spheredom
+
+      real(kind=8) :: incident_t(780) , incident_eta(780)
+      real(kind=8) :: dh_star, dmu_star 
+      common /cominc/ incident_t, incident_eta, dh_star, dmu_star
 
       hxmarg = hx*.01
       hymarg = hy*.01
@@ -270,6 +275,7 @@ c
       go to (400,410,420,430) mthbc(4)+1
 c
   400 continue
+c     write(6,*) '+++ dh_star, dmu_star in bc:',dh_star,dmu_star
       do j=jbeg,ncol
          do i=1,nrow
             do m=1,meqn
@@ -277,7 +283,13 @@ c
                val(m,i,j) = val(m,i,jbeg-1)
                enddo
             if (aux(1,i,j) < 0.d0) then
-                val(1,i,j) = 0.5d0*sin(0.0100*time) - aux(1,i,j)
+                h_int = val(1,i,jbeg-1)  ! interior value of depth
+                val(1,i,j) = h_int + dh_star
+                amu_int = val(3,i,jbeg-1)  ! interior value of momentum
+                val(3,i,j) = amu_int + dmu_star
+c               if (i==nrow) then
+c                   write(6,*) '+++ bc val3 = ',val(3,i,j)
+c                   endif
               else
                 val(1,i,j) = 0.d0
               endif

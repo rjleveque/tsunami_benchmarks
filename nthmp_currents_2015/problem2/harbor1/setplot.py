@@ -185,7 +185,7 @@ def setplot(plotdata):
     # Figure for zoom plot
     #-----------------------------------------
     plotfigure = plotdata.new_plotfigure(name='zoom2', figno=3)
-    plotfigure.kwargs = {'figsize':(6,12)}
+    #plotfigure.kwargs = {'figsize':(6,12)}
 
     # Set up for axes in this figure:
     plotaxes = plotfigure.new_plotaxes('imshow')
@@ -203,7 +203,7 @@ def setplot(plotdata):
     plotitem.imshow_cmax = 0.8
     plotitem.add_colorbar = True
     plotitem.amr_celledges_show = [0,0,0]
-    plotitem.patchedges_show = 0
+    plotitem.patchedges_show = 1
 
     # Land
     plotitem = plotaxes.new_plotitem(plot_type='2d_imshow')
@@ -214,8 +214,8 @@ def setplot(plotdata):
     plotitem.add_colorbar = False
     plotitem.amr_celledges_show = [0,0,0]
     plotitem.patchedges_show = 0
-    plotaxes.xlimits = [204.9003, 204.965]
-    plotaxes.ylimits = [19.71, 19.91]
+    #plotaxes.xlimits = [204.9003, 204.965]
+    #plotaxes.ylimits = [19.71, 19.91]
 
 
     # add contour lines of bathy if desired:
