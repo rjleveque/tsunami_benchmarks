@@ -112,13 +112,13 @@ def setrun(claw_pkg='geoclaw'):
     # Specify at what times the results should be written to fort.q files.
     # Note that the time integration stops after the final output time.
  
-    clawdata.output_style = 2
+    clawdata.output_style = 1
  
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
-        clawdata.num_output_times = 16
-        clawdata.tfinal = 4*3600.
+        clawdata.num_output_times = 12
+        clawdata.tfinal = 6*3600.
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     elif clawdata.output_style == 2:
@@ -298,12 +298,12 @@ def setrun(claw_pkg='geoclaw'):
     amrdata = rundata.amrdata
 
     # max number of refinement levels:
-    amrdata.amr_levels_max = 3
+    amrdata.amr_levels_max = 4
 
     # List of refinement ratios at each level (length at least amr_level_max-1)
-    amrdata.refinement_ratios_x = [2,3]
-    amrdata.refinement_ratios_y = [2,3]
-    amrdata.refinement_ratios_t = [2,3]
+    amrdata.refinement_ratios_x = [2,2,3]
+    amrdata.refinement_ratios_y = [2,2,3]
+    amrdata.refinement_ratios_t = [2,2,3]
 
 
     # Specify type of each aux variable in amrdata.auxtype.
@@ -344,7 +344,8 @@ def setrun(claw_pkg='geoclaw'):
 
     regions.append([1, 1, 0., 1e9, 0, 360, -90, 90])
     regions.append([1, 2, 0., 1e9, 204.9, 204.95, 19.7, 19.754])
-    regions.append([1, 3, 0., 1e9, 204.9, 204.95, 19.72, 19.748])
+    regions.append([1, 3, 0., 1e9, 204.9, 204.95, 19.7, 19.751])
+    regions.append([1, 4, 0., 1e9, 204.9, 204.95, 19.72, 19.748])
     
 
 
