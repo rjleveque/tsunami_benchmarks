@@ -46,19 +46,20 @@ TG = loadtxt(comparison_data_dir + 'TG_1617760_detided.txt')
 TG_t = TG[:,0] / 3600.  # hours since EQ
 TG_eta = TG[:,1]
 
-g7760 = plotdata.getgauge(7760)
-t = g7760.t / 3600. + toffset
-eta = g7760.q[3,:] - sea_level   # correct for sea_level to compare with detided
+for gaugeno in [7760, 7761, 7762]:
+    g= plotdata.getgauge(gaugeno)
+    t = g.t / 3600. + toffset
+    eta = g.q[3,:] - sea_level   # correct for sea_level to compare with detided
 
-figure(7760, figsize=(12,5))
-clf()
-plot(TG_t,TG_eta,'k-o',label='Observed')
-plot(t, eta, 'r',label='GeoClaw')
-ylabel('meters')
-legend(loc='upper right')
-xlim(7.0,12.5)
-title('Tide Gauge 7760')
-show()
+    figure(gaugeno, figsize=(12,5))
+    clf()
+    plot(TG_t,TG_eta,'k-o',label='Observed')
+    plot(t, eta, 'r',label='GeoClaw')
+    ylabel('meters')
+    legend(loc='upper right')
+    xlim(7.0,12.5)
+    title('Tide Gauge gaugeno')
+    show()
 
 # ---  ADCP HAI1125 ---
 
@@ -133,5 +134,7 @@ def save_plot(gaugeno):
 if 1:
     save_plot(3333)
     save_plot(7760)
+    save_plot(7761)
+    save_plot(7762)
     save_plot(1125)
     save_plot(1126)

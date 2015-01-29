@@ -112,7 +112,7 @@ def setrun(claw_pkg='geoclaw'):
     # Specify at what times the results should be written to fort.q files.
     # Note that the time integration stops after the final output time.
  
-    clawdata.output_style = 1
+    clawdata.output_style = 2
  
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
@@ -245,7 +245,9 @@ def setrun(claw_pkg='geoclaw'):
     # gauges.append([11261, 204.93003, 19.739, 0., 1.e9])
     # #Hilo
     # Tide gauge:
-    gauges.append([7760, 204.9437, 19.7306,  0., 1.e9]) #Hilo
+    gauges.append([7760, 204.9437, 19.7306,  0., 1.e9]) # Hilo
+    gauges.append([7761, 204.9447, 19.7308,  0., 1.e9]) # From Benchmark descr.
+    gauges.append([7762, 204.9437, 19.7307,  0., 1.e9]) # Shift so depth > 0
 
     # Gauge at point requested by Pat Lynett:
     gauges.append([3333, 204.93, 19.7576,  0., 1.e9]) 
@@ -390,7 +392,7 @@ def setgeo(rundata):
     geo_data.coriolis_forcing = False
 
     # == Algorithm and Initial Conditions ==
-    geo_data.sea_level = -0.13
+    geo_data.sea_level = 0.
     geo_data.dry_tolerance = 0.001
     geo_data.friction_forcing = True
     geo_data.manning_coefficient = 0.025

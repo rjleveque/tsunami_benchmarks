@@ -292,14 +292,13 @@ def setplot(plotdata):
     #-----------------------------------------
     
     plotfigure = plotdata.new_plotfigure(name='velocity', figno=10)
-    plotfigure.show = False
+    #plotfigure.show = False
 
     # Set up for axes for velocity
     plotaxes = plotfigure.new_plotaxes()
     #plotaxes.axescmd = 'subplot(212)'
     plotaxes.title = 'Velocity'
     plotaxes.scaled = True
-    #plotaxes.xlimits = [4.5,9.5]
 
     def speed(current_data):
         from pylab import where,sqrt
@@ -320,7 +319,50 @@ def setplot(plotdata):
     plotitem.imshow_cmap = \
            colormaps.make_colormap({0:[1,1,1],0.5:[0.5,0.5,1],1:[1,0.3,0.3]})
     plotitem.imshow_cmin = 0.
-    plotitem.imshow_cmax = 0.115 * 2
+    plotitem.imshow_cmax = 1.
+    plotitem.add_colorbar = True
+    plotitem.colorbar_shrink = 0.6
+    plotitem.amr_celledges_show = [0]
+    plotitem.amr_patchedges_show = [0]
+
+
+    #-----------------------------------------
+    # Figure for velocity plot
+    #-----------------------------------------
+    
+    plotfigure = plotdata.new_plotfigure(name='v-velocity', figno=12)
+    #plotfigure.show = False
+
+    # Set up for axes for velocity
+    plotaxes = plotfigure.new_plotaxes()
+    #plotaxes.axescmd = 'subplot(212)'
+    plotaxes.title = 'Velocity'
+    plotaxes.scaled = True
+
+    def uvel(current_data):
+        from numpy import where, sqrt
+        q = current_data.q
+        h = q[0,:]
+        dry_tol = 0.001
+        u = where(h>dry_tol, q[1,:]/h, 0.)
+        return u
+
+    def vvel(current_data):
+        from numpy import where, sqrt
+        q = current_data.q
+        h = q[0,:]
+        dry_tol = 0.001
+        v = where(h>dry_tol, q[2,:]/h, 0.)
+        return v
+
+    # Water
+    plotitem = plotaxes.new_plotitem(plot_type='2d_imshow')
+    plotitem.plot_var = vvel
+    #plotitem.imshow_cmap = colormaps.white_red
+    #plotitem.imshow_cmap = colormaps.yellow_red_blue
+    plotitem.imshow_cmap = colormaps.blue_white_red
+    plotitem.imshow_cmin = -1.
+    plotitem.imshow_cmax = 1.
     plotitem.add_colorbar = True
     plotitem.colorbar_shrink = 0.6
     plotitem.amr_celledges_show = [0]
