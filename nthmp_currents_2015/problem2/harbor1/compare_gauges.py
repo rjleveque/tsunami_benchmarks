@@ -14,7 +14,7 @@ print "GeoClaw simulation at sea_level = %g relative to MHW" % sea_level
 
 plotdata = ClawPlotData()
 
-plotdata.outdir = '_output_1-2sec_fgmax'
+plotdata.outdir = '_output'
 #toffset = 7. # hours
 toffset = 6.6 # hours fits data at 7760 better
 
