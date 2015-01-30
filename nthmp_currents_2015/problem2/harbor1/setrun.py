@@ -112,7 +112,7 @@ def setrun(claw_pkg='geoclaw'):
     # Specify at what times the results should be written to fort.q files.
     # Note that the time integration stops after the final output time.
  
-    clawdata.output_style = 2
+    clawdata.output_style = 1
  
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
@@ -300,7 +300,7 @@ def setrun(claw_pkg='geoclaw'):
     amrdata = rundata.amrdata
 
     # max number of refinement levels:
-    amrdata.amr_levels_max = 4
+    amrdata.amr_levels_max = 3
 
     # List of refinement ratios at each level (length at least amr_level_max-1)
     amrdata.refinement_ratios_x = [2,2,3]
@@ -426,8 +426,8 @@ def setgeo(rundata):
     # == fgmax.data values ==
     fgmax_files = rundata.fgmax_data.fgmax_files
     # for fixed grids append to this list names of any fgmax input files
-    #fgmax_files.append('fgmax1.txt')
-    #rundata.fgmax_data.num_fgmax_val = 2
+    fgmax_files.append('fgmax_grid.txt')
+    rundata.fgmax_data.num_fgmax_val = 2
 
 
     return rundata
