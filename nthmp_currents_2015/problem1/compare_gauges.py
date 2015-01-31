@@ -5,10 +5,13 @@ from clawpack.visclaw.data import ClawPlotData
 
 plotdata = ClawPlotData()
 
+plotdata.outdir = '_output'
+toffset = 0.
+
 if 0:
     plotdata.outdir = '_output_manning_0.025'
     toffset = 92.
-if 1:
+if 0:
     plotdata.outdir = '_output_manning_0.015'
     toffset = 92.
 

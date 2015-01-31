@@ -11,8 +11,8 @@ import numpy
 from clawpack.visclaw import colormaps
 import os
 
-outdir1 = os.path.abspath('_output_manning010_cfl089')
-outdir2 = os.path.abspath('_output_manning010_cfl090')
+outdir1 = os.path.abspath('_output_manning010_gt4_cfl089')
+outdir2 = os.path.abspath('_output_manning010_gt4_cfl090')
 
 
 #--------------------------

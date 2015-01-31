@@ -48,6 +48,7 @@ SOURCES = \
   bc2amr.f \
   qinit.f90 \
   b4step2.f90 \
+  src2.f90 \
   valout_vorticity.f \
   $(GEOLIB)/setprob.f90 \
   $(GEOLIB)/topo_update.f90 \
@@ -58,7 +59,6 @@ SOURCES = \
   $(CLAW)/riemann/src/rpn2_geoclaw.f \
   $(CLAW)/riemann/src/rpt2_geoclaw.f \
   $(CLAW)/riemann/src/geoclaw_riemann_utils.f \
-  $(GEOLIB)/src2.f90 \
   $(GEOLIB)/src1d.f90 \
   $(GEOLIB)/step2.f90 \
   $(GEOLIB)/flux2fw.f \
