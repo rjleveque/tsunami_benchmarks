@@ -75,9 +75,9 @@ t = g.t / 3600. + toffset
 u = g.q[1,:] / g.q[0,:]  * 100 # convert to cm/sec
 v = g.q[2,:] / g.q[0,:]  * 100 # convert to cm/sec
 
-figure(1125, figsize=(12,10))
+figure(1125, figsize=(12,12))
 clf()
-subplot(211)
+subplot(311)
 plot(TG_t,TG_u,'k-o',label='Observed')
 plot(t, u, 'r',label='GeoClaw')
 ylabel('cm/sec')
@@ -86,7 +86,7 @@ xlim(7.0,12.5)
 ylim(-150,150)
 title('HAI1125, E-W velocity')
 
-subplot(212)
+subplot(312)
 plot(TG_t,TG_v,'k-o',label='Observed')
 plot(t, v, 'r',label='GeoClaw')
 ylabel('cm/sec')
@@ -94,6 +94,17 @@ legend(loc='upper right')
 xlim(7.0,12.5)
 ylim(-150,150)
 title('HAI1125, N-S velocity')
+
+subplot(313)
+TG_s = sqrt(TG_u**2 + TG_v**2)
+s = sqrt(u**2 + v**2)
+plot(TG_t,TG_s,'k-o',label='Observed')
+plot(t, s, 'r',label='GeoClaw')
+ylabel('cm/sec')
+legend(loc='upper right')
+xlim(7.0,12.5)
+ylim(-50,150)
+title('HAI1125, speed')
 
 show()
 
@@ -109,9 +120,9 @@ t = g.t / 3600. + toffset
 u = g.q[1,:] / g.q[0,:]  * 100 # convert to cm/sec
 v = g.q[2,:] / g.q[0,:]  * 100 # convert to cm/sec
 
-figure(1126, figsize=(12,10))
+figure(1126, figsize=(12,12))
 clf()
-subplot(211)
+subplot(311)
 plot(TG_t,TG_u,'k-o',label='Observed')
 plot(t, u, 'r',label='GeoClaw')
 ylabel('cm/sec')
@@ -120,7 +131,7 @@ xlim(7.0,12.5)
 ylim(-150,150)
 title('HAI1126, E-W velocity')
 
-subplot(212)
+subplot(312)
 plot(TG_t,TG_v,'k-o',label='Observed')
 plot(t, v, 'r',label='GeoClaw')
 ylabel('cm/sec')
@@ -129,6 +140,16 @@ xlim(7.0,12.5)
 ylim(-150,150)
 title('HAI1126, N-S velocity')
 
+subplot(313)
+TG_s = sqrt(TG_u**2 + TG_v**2)
+s = sqrt(u**2 + v**2)
+plot(TG_t,TG_s,'k-o',label='Observed')
+plot(t, s, 'r',label='GeoClaw')
+ylabel('cm/sec')
+legend(loc='upper right')
+xlim(7.0,12.5)
+ylim(-50,150)
+title('HAI1126, speed')
 show()
 
 def save_plot(gaugeno):
