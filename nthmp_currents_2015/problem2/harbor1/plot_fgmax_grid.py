@@ -41,7 +41,7 @@ def make_plots(outdir='_output', plotdir='_plots', gridno=1):
 
     # Contour levels for zeta in filled contour plots:
     #clines_zeta = None  # can set to desired contours of zeta 
-    clines_zeta = [0,0.5,1,1.5,2,4,6,8]   # meters
+    clines_zeta = [0,0.5,1,1.5,2,2.5,3,4]   # meters
     
 
     # Contour levels for arrival time and time of max zeta:

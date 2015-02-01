@@ -457,6 +457,13 @@ def setplot(plotdata):
     plotaxes.ylimits = [-50,50]
     plotaxes.afteraxes = add_legend
 
+    #-----------------------------------------
+    # Figures for fgmax - max values on fixed grids
+    #-----------------------------------------
+    otherfigure = plotdata.new_otherfigure(name='max speed',
+                    fname='speed.png')
+    otherfigure = plotdata.new_otherfigure(name='max elevation', fname='zeta.png')
+
 
 
     #-----------------------------------------
@@ -466,7 +473,7 @@ def setplot(plotdata):
 
     plotdata.printfigs = True                # print figures
     plotdata.print_format = 'png'            # file format
-    plotdata.print_framenos = 'all'          # list of frames to print
+    plotdata.print_framenos = [5]           # list of frames to print
     plotdata.print_gaugenos = 'all'          # list of gauges to print
     plotdata.print_fignos = 'all'            # list of figures to print
     plotdata.html = True                     # create html files of plots?
