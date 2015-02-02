@@ -297,7 +297,7 @@ def setplot(plotdata):
     # Set up for axes for velocity
     plotaxes = plotfigure.new_plotaxes()
     #plotaxes.axescmd = 'subplot(212)'
-    plotaxes.title = 'Velocity'
+    plotaxes.title = 'Speed'
     plotaxes.scaled = True
 
     def speed(current_data):
@@ -317,7 +317,7 @@ def setplot(plotdata):
     #plotitem.imshow_cmap = colormaps.white_red
     #plotitem.imshow_cmap = colormaps.yellow_red_blue
     plotitem.imshow_cmap = \
-           colormaps.make_colormap({0:[1,1,1],0.5:[0.5,0.5,1],1:[1,0.3,0.3]})
+           colormaps.make_colormap({0:[1,1,1],0.5:[0.1,0.1,1],1:[1,0.1,0.1]})
     plotitem.imshow_cmin = 0.
     plotitem.imshow_cmax = 1.
     plotitem.add_colorbar = True
@@ -331,12 +331,12 @@ def setplot(plotdata):
     #-----------------------------------------
     
     plotfigure = plotdata.new_plotfigure(name='v-velocity', figno=12)
-    #plotfigure.show = False
+    plotfigure.show = False
 
     # Set up for axes for velocity
     plotaxes = plotfigure.new_plotaxes()
     #plotaxes.axescmd = 'subplot(212)'
-    plotaxes.title = 'Velocity'
+    plotaxes.title = 'v-velocity'
     plotaxes.scaled = True
 
     def uvel(current_data):
