@@ -357,10 +357,8 @@ def setgeo(rundata):
     geo_data.sea_level = 0.0
     geo_data.dry_tolerance = 1.e-3
     geo_data.friction_forcing = True
-    geo_data.manning_coefficient =  0.01
-    #geo_data.friction_depth = 0.05
-    # use modified src2.f90 routine that only applies for x > 4.
-    geo_data.friction_depth = 1.
+    geo_data.manning_coefficient =  0.015
+    geo_data.friction_depth = 0.05
 
     # Refinement data
     refinement_data = rundata.refinement_data

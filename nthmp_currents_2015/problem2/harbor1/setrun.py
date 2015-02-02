@@ -117,8 +117,8 @@ def setrun(claw_pkg='geoclaw'):
     if clawdata.output_style==1:
         # Output ntimes frames at equally spaced times up to tfinal:
         # Can specify num_output_times = 0 for no output
-        clawdata.num_output_times = 10
-        clawdata.tfinal = 5*3600.
+        clawdata.num_output_times = 14
+        clawdata.tfinal = 7*3600.
         clawdata.output_t0 = True  # output at initial (or restart) time?
         
     elif clawdata.output_style == 2:
@@ -300,12 +300,12 @@ def setrun(claw_pkg='geoclaw'):
     amrdata = rundata.amrdata
 
     # max number of refinement levels:
-    amrdata.amr_levels_max = 4
+    amrdata.amr_levels_max = 3
 
     # List of refinement ratios at each level (length at least amr_level_max-1)
-    amrdata.refinement_ratios_x = [2,3,2]
-    amrdata.refinement_ratios_y = [2,3,2]
-    amrdata.refinement_ratios_t = [2,3,2]
+    amrdata.refinement_ratios_x = [2,3]
+    amrdata.refinement_ratios_y = [2,3]
+    amrdata.refinement_ratios_t = [2,3]
 
 
     # Specify type of each aux variable in amrdata.auxtype.

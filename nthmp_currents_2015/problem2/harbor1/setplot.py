@@ -300,6 +300,18 @@ def setplot(plotdata):
     plotaxes.title = 'Speed'
     plotaxes.scaled = True
 
+    def fixup(current_data):
+        import pylab
+        addgauges(current_data)
+        t = current_data.t
+        t = t / 3600.  # hours
+        pylab.title('Speed at %4.2f hours' % t, fontsize=20)
+        pylab.ticklabel_format(format='plain',useOffset=False)
+        mean_lat = 19.7
+        pylab.gca().set_aspect(1.0 / pylab.cos(pylab.pi / 180.0 * mean_lat))
+        pylab.xticks(rotation=20)
+    plotaxes.afteraxes = fixup
+
     def speed(current_data):
         from pylab import where,sqrt
         q = current_data.q

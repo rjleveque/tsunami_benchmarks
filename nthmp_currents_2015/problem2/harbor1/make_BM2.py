@@ -9,9 +9,10 @@ from clawpack.visclaw.data import ClawPlotData
 
 plotdata = ClawPlotData()
 
-plotdata.outdir = '_output'
+plotdata.outdir = '_output_1-3sec_alltime'
 
-tfinal = 4.9 * 3600.
+#tfinal = 4.9 * 3600.
+tfinal = 6.4 * 3600.  # for alltime
 dt = 1.  # time increment for output files
 tout = arange(0., tfinal, dt)   
 
@@ -41,7 +42,4 @@ g1126_speed = p(tout)
 d = vstack([tout, g3333_eta, g7761_eta, g1125_speed, g1126_speed]).T
 
 savetxt('BM2_leveque.txt',d,fmt='%.12e ')
-
-
-
 

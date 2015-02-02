@@ -47,9 +47,9 @@ MODULES = \
 SOURCES = \
   bc2amr.f \
   qinit.f90 \
-  b4step2.f90 \
-  src2.f90 \
   valout_vorticity.f \
+  $(GEOLIB)/b4step2.f90 \
+  $(GEOLIB)/src2.f90 \
   $(GEOLIB)/setprob.f90 \
   $(GEOLIB)/topo_update.f90 \
   $(GEOLIB)/cellgridintegrate2.f \

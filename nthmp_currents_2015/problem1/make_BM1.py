@@ -1,25 +1,28 @@
-
+"""
+Create the BM1_leveque.txt file requested by Pat Lynett.
+"""
 
 from pylab import *
 from clawpack.visclaw.data import ClawPlotData
 
 plotdata = ClawPlotData()
 
-if 0:
-    plotdata.outdir = '_output'
-    toffset = 0.
+toffset = 0.
 
+if 1:
+    plotdata.outdir = '_output_manning010_cfl090'
+    fname = 'BM1_leveque_1.txt'
 if 0:
-    plotdata.outdir = '_output_manning_0.025'
-    toffset = 92.
+    plotdata.outdir = '_output_manning010_cfl089'
+    fname = 'BM1_leveque_2.txt'
 if 0:
     plotdata.outdir = '_output_manning015_cfl090'
-    toffset = 92.
-if 1:
+    fname = 'BM1_leveque_3.txt'
+if 0:
     plotdata.outdir = '_output_manning015_cfl089'
-    toffset = 96.
+    fname = 'BM1_leveque_4.txt'
 
-figure(50,figsize=(18,12))
+figure(figsize=(8,12))
 clf()
 
 # ---  Gauge 1 ---
@@ -33,19 +36,20 @@ t1v = d[:,0]
 s1v = d[:,1]
 
 g = plotdata.getgauge(1)
-u = g.q[1,:] / g.q[0,:]
-v = g.q[2,:] / g.q[0,:]
-
+u1 = g.q[1,:] / g.q[0,:]
+v1 = g.q[2,:] / g.q[0,:]
+t1 = g.t
 
 subplot(4,1,1)
 plot(t1u+toffset,s1u,'b',label='Experiment')
-plot(g.t, u, 'r',label='GeoClaw')
+plot(t1, u1, 'r',label='GeoClaw')
 ylabel('u (m/s)')
 legend(loc='upper right')
+title(plotdata.outdir)
 
 subplot(4,1,2)
 plot(t1v+toffset,s1v,'b',label='Experiment')
-plot(g.t, v, 'r',label='GeoClaw')
+plot(t1, v1, 'r',label='GeoClaw')
 ylabel('v (m/s)')
 
 # ---  Gauge 2 ---
@@ -59,19 +63,26 @@ t2v = d[:,0]
 s2v = d[:,1]
 
 g = plotdata.getgauge(2)
-u = g.q[1,:] / g.q[0,:]
-v = g.q[2,:] / g.q[0,:]
+u2 = g.q[1,:] / g.q[0,:]
+v2 = g.q[2,:] / g.q[0,:]
+t2 = g.t
+
+
 
 subplot(4,1,3)
 plot(t2u+toffset,s2u,'b',label='Experiment')
-plot(g.t, u, 'r',label='GeoClaw')
+plot(t2, u2, 'r',label='GeoClaw')
 ylabel('u (m/s)')
 legend(loc='upper right')
 
 subplot(4,1,4)
 plot(t2v+toffset,s2v,'b',label='Experiment')
-plot(g.t, v, 'r',label='GeoClaw')
+plot(t2, v2, 'r',label='GeoClaw')
 ylabel('v (m/s)')
 
 show()
-#savefig('gauges_manning015_cfl089.png')
+
+gdata = vstack([t1, u1, v1, u2, v2]).T
+savetxt(fname,  gdata, fmt='%.12e')
+
+print "Created ",fname
