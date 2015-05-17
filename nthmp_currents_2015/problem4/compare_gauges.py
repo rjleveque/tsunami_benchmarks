@@ -48,7 +48,9 @@ b9a = reshape(b9,(9000,4))
 
 
 plotdata = ClawPlotData()
-plotdata.outdir = '_output_3'
+#plotdata.outdir = '_output_3'
+plotdata.outdir = '_output'
+
 
 figure(50,figsize=(8,12))
 clf()
@@ -56,7 +58,8 @@ for gnum,wg in zip([1,2,3,4], [wg1,wg2,wg3,wg4]):
     g = plotdata.getgauge(gnum)
     subplot(4,1,gnum)
     plot(t,wg,'b',label='Measured')
-    plot(g.t, g.q[3,:],'r',label='GeoClaw')
+    #plot(g.t, g.q[3,:],'r',label='GeoClaw')
+    plot(g.t, g.q[0,:],'r',label='GeoClaw')   # since using wrong gauge_module
     xlim(0,40)
     title('Gauge %s' % gnum)
     ylabel('surface (m)')
@@ -74,6 +77,7 @@ if 0:
 figure(501); clf()
 figure(502); clf()
 figure(503); clf()
+figure(600); clf()
 
 subp = 0
 for bnum,ba in zip([1,4,6,9], [b1a,b4a,b6a,b9a]):
@@ -144,6 +148,47 @@ for bnum,ba in zip([1,4,6,9], [b1a,b4a,b6a,b9a]):
     text(22,ymid,'B%s' % bnum, fontsize=15)
     if subp==1: title('Momentum flux')
 
+    figure(600)
+    a = subplot(3,4,subp)
+    plot(ba[:,0],ba[:,1],'b',label='Measured')
+    plot(g.t, g.q[1,:],'r',label='GeoClaw')
+    xlim(20,40)
+    ylim(-0.02,0.25)
+    a.set_xticklabels([])
+    if subp==1: 
+        ylabel('depth (m)')
+    else:
+        a.set_yticklabels([])
+    ymid = array(gca().get_ylim()).mean()
+    #a.text(17,ymid,'B%s' % bnum, fontsize=15)
+    title('Gauge B%s' % bnum, fontsize=15)
+
+    a = subplot(3,4,subp+4)
+    plot(ba[:,0],ba[:,2],'b')
+    plot(g.t, u, 'r')
+    xlim(20,40)
+    ylim(-0.05,2.5)
+    a.set_xticklabels([])
+    if subp==1: 
+        ylabel('speed (m/s)')
+    else:
+        a.set_yticklabels([])
+    ymid = array(gca().get_ylim()).mean()
+    #a.text(17,ymid,'B%s' % bnum, fontsize=15)
+
+    a = subplot(3,4,subp+8)
+    plot(ba[:,0],ba[:,3],'b',label='Measured')
+    plot(g.t, hss, 'r',label='GeoClaw')
+    xlim(20,40)
+    ylim(-0.05,1.0)
+    if subp==1: 
+        ylabel('mflux (m^3/s^2)')
+    else:
+        a.set_yticklabels([])
+    ymid = array(gca().get_ylim()).mean()
+    #a.text(17,ymid,'B%s' % bnum, fontsize=15)
+
+
 if 0:
     figure(50); fname = 'wg1-4.png'; savefig(fname); print "Saved ",fname
     figure(201); fname = 'B1.png'; savefig(fname); print "Saved ",fname
@@ -153,6 +198,7 @@ if 0:
     figure(501); fname = 'B_depth.png'; savefig(fname); print "Saved ",fname
     figure(502); fname = 'B_velocity.png'; savefig(fname); print "Saved ",fname
     figure(503); fname = 'B_mflux.png'; savefig(fname); print "Saved ",fname
+figure(600); fname = 'B_gauges.png'; savefig(fname); print "Saved ",fname
 
 def compare(gaugeno):
     row_num = int(floor(gaugeno/100.))
@@ -204,9 +250,10 @@ def compare(gaugeno):
     ylabel('mflux (m^3/s^2)')
     legend(loc='upper left')
 
-    fname = '%s.png' % gauge
-    savefig(fname)
-    print "Created ",fname
+    if 0:
+        fname = '%s.png' % gauge
+        savefig(fname)
+        print "Created ",fname
 
 gaugenos = range(101,110) + range(201,210) + range(301,310) + range(401,405)
 

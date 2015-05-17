@@ -111,13 +111,13 @@ def setrun(claw_pkg='geoclaw'):
     # Note that the time integration stops after the final output time.
     # The solution at initial time t0 is always written in addition.
 
-    clawdata.output_style = 2
+    clawdata.output_style = 1
 
     if clawdata.output_style==1:
         # Output nout frames at equally spaced times up to tfinal:
-        clawdata.num_output_times = 7
+        clawdata.num_output_times = 5
         clawdata.tfinal = 35.0
-        clawdata.output_t0 = True  # output at initial (or restart) time?
+        clawdata.output_t0 = False  # output at initial (or restart) time?
 
     elif clawdata.output_style == 2:
         # Specify a list of output times.
@@ -371,6 +371,12 @@ def setrun(claw_pkg='geoclaw'):
     gauges.append([403, 38.09,  4.07, 25., 1e10])
     gauges.append([404, 38.14,  3.59, 25., 1e10])
 
+    # Virtual gauges suggested by Elena Tolkova:
+    gauges.append([501, 33.72 - 1.7, -0.59, 20., 1e10])
+    gauges.append([502, 33.72 - 1.2, -0.59, 20., 1e10])
+    gauges.append([503, 33.72 - 0.7, -0.59, 20., 1e10])
+    gauges.append([504, 33.72 - 0.2, -0.59, 20., 1e10])
+
     return rundata
     # end of function setrun
     # ----------------------
@@ -436,8 +442,8 @@ def setgeo(rundata):
     # == fgmax.data values ==
     fgmax_files = rundata.fgmax_data.fgmax_files
     # for fixed grids append to this list names of any fgmax input files
-    fgmax_files.append('fgmax_grid.txt')
-    rundata.fgmax_data.num_fgmax_val = 5  # Save h,s,hs,hss,min_depth
+    #fgmax_files.append('fgmax_grid.txt')
+    #rundata.fgmax_data.num_fgmax_val = 5  # Save h,s,hs,hss,min_depth
 
 
     return rundata
