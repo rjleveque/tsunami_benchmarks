@@ -8,9 +8,12 @@ from pylab import *
 
 def maketopo_onshore():
 
-    x = loadtxt('x_onshore.txt')
-    y = loadtxt('y_onshore.txt')
-    z = loadtxt('z_onshore.txt')
+    try:
+        x = loadtxt('x_onshore.txt')
+        y = loadtxt('y_onshore.txt')
+        z = loadtxt('z_onshore.txt')
+    except:
+        raise Exception("Did you create onshore topo files?  See README.md")
     
     # modify x and y so that cell size is truly uniform:
     xx = arange(x.min(),x.min() + 0.01*(len(x)-1) + .001, 0.01)
@@ -41,7 +44,7 @@ def maketopo_pwlinear():
     ylower = -20.e0
     yupper = 20.e0
     outfile= "pwlinear2.topotype1"     
-    topotools.topo1writer(outfile,topo,xlower,xupper,ylower,yupper,nxpoints,nypoints)
+    topotools.topo1writer(outfile,topo_pwlinear,xlower,xupper,ylower,yupper,nxpoints,nypoints)
 
 def topo_pwlinear(x,y):
     """
