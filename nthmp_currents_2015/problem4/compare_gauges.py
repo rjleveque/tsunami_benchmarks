@@ -58,8 +58,7 @@ for gnum,wg in zip([1,2,3,4], [wg1,wg2,wg3,wg4]):
     g = plotdata.getgauge(gnum)
     subplot(4,1,gnum)
     plot(t,wg,'b',label='Measured')
-    #plot(g.t, g.q[3,:],'r',label='GeoClaw')
-    plot(g.t, g.q[0,:],'r',label='GeoClaw')   # since using wrong gauge_module
+    plot(g.t, g.q[3,:],'r',label='GeoClaw')
     xlim(0,40)
     title('Gauge %s' % gnum)
     ylabel('surface (m)')
@@ -87,7 +86,7 @@ for bnum,ba in zip([1,4,6,9], [b1a,b4a,b6a,b9a]):
     clf()
     subplot(311)
     plot(ba[:,0],ba[:,1],'b',label='Measured')
-    plot(g.t, g.q[1,:],'r',label='GeoClaw')
+    plot(g.t, g.q[0,:],'r',label='GeoClaw')
     xlim(15,40)
     title('Gauge B%s' % bnum)
     ylabel('depth (m)')
@@ -95,7 +94,7 @@ for bnum,ba in zip([1,4,6,9], [b1a,b4a,b6a,b9a]):
     figure(501)
     subplot(4,1,subp)
     plot(ba[:,0],ba[:,1],'b',label='Measured')
-    plot(g.t, g.q[1,:],'r',label='GeoClaw')
+    plot(g.t, g.q[0,:],'r',label='GeoClaw')
     xlim(15,40)
     ylabel('depth (m)')
     ymid = array(gca().get_ylim()).mean()
@@ -149,9 +148,10 @@ for bnum,ba in zip([1,4,6,9], [b1a,b4a,b6a,b9a]):
     if subp==1: title('Momentum flux')
 
     figure(600)
+    # New figure for conference paper with columns B1, B4, B6, B9
     a = subplot(3,4,subp)
     plot(ba[:,0],ba[:,1],'b',label='Measured')
-    plot(g.t, g.q[1,:],'r',label='GeoClaw')
+    plot(g.t, g.q[0,:],'r',label='GeoClaw')
     xlim(20,40)
     ylim(-0.02,0.25)
     a.set_xticklabels([])
@@ -198,7 +198,11 @@ if 0:
     figure(501); fname = 'B_depth.png'; savefig(fname); print "Saved ",fname
     figure(502); fname = 'B_velocity.png'; savefig(fname); print "Saved ",fname
     figure(503); fname = 'B_mflux.png'; savefig(fname); print "Saved ",fname
+
+# Figure for paper:
 figure(600); fname = 'B_gauges.png'; savefig(fname); print "Saved ",fname
+
+
 
 def compare(gaugeno):
     row_num = int(floor(gaugeno/100.))
@@ -227,7 +231,7 @@ def compare(gaugeno):
     clf()
     subplot(311)
     plot(gdata[:,0],gdata[:,1],'b',label='Measured')
-    plot(g.t, g.q[1,:],'r',label='GeoClaw')
+    plot(g.t, g.q[0,:],'r',label='GeoClaw')
     xlim(15,40)
     title('Gauge %s' % gauge)
     ylabel('depth (m)')
