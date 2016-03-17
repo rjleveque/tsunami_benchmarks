@@ -1,0 +1,55 @@
+
+Dear Pat,
+
+Thanks for all the work you've put into pulling this report and journal
+article together!
+
+We have some suggestions on the text that we'll send you in a doc file.
+
+But I have a comment that the group as a whole might want to consider.  I
+was of course disappointed to see that the GeoClaw results for
+Problem 1 were so much of an outlier relative to most others, and
+mystified as to why the results reported by Hongkie Thio and
+Wenwen Li using their version of GeoClaw seemed to be so different,
+in spite of apparently using the same parameters.  So I've been
+doing some more runs to try to sort this out.
+
+One thing I discovered is that there was a bug in the GeoClaw Riemann
+solver in the case of low flow depth that Wenwen pointed out to me, but
+that was not included in the version of GeoClaw I was running last
+spring.  Making that change to the Riemann solver gave significantly
+different results, with smaller peak velocities, making them more in
+line with other results.  
+
+Also, we did not put much effort into optimizing parameters last
+spring, but I notice that many groups used a coarser grid than we
+did, by a factor of 2, which of course adds more dissipation if I
+switch to that resolution.  And we originally set the friction
+factor to 0 away from the island, whereas increasing this to 0.005
+for example also improves the agreement.
+
+I'm attaching the gauge comparison with this new version and also the
+original from the workshop.  
+
+I realize it's too late to modify the submitted results, but the point I
+would like to bring up is that this problem is extremely sensitive to
+parameter choices, mesh size, etc. and so I think we need to be very careful
+about setting criteria for codes based on this benchmark.  I made this
+point at the workshop and before, when I showed that simply changing the
+target Courant number from 0.9 to 0.89 made significant differences in
+the vortex generation, plots at
+  http://depts.washington.edu/clawpack/geoclaw/benchmarks/nthmp_currents_2015/problem1/index.html
+
+Moreover, I think it is a problem that this wave tank experiment was
+done in 5.4 cm of water.  At this depth the friction terms are
+critical of course, in a way that is not at all representative of real
+tsunami current modeling problems.  Even when looking at overland
+inundation the currents don't matter much at that depth, and for looking
+at things like vorticity generation in harbors the depth is much larger. 
+
+So I would like to argue against using this problem as a future
+benchmark problem in the context of approving codes for modeling tsunami
+currents.  But I'd be happy to hear what others think of this?
+
+
+
