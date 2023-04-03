@@ -562,12 +562,14 @@ def move_debris_substeps(dbnos, debris_paths, fgout1, fgout2, drag_factor=None,
                         # need to fix for lat-lon:
                         dist = distfunc(xd1,yd1,xdk,ydk)
                         diamjk = dradius[dbno] + dradius[dbnok]
-                        if tether is not None:
+                        try:
                             Dt,Kt = tether(dbno,dbnok)
-                            if (Dt != dist) and Kt > 0:
-                                fxd = fxd + Kt*(xd1-xdk)*(Dt-dist)/dist
-                                fyd = fyd + Kt*(yd1-ydk)*(Dt-dist)/dist
-                        if dist < diamjk:
+                        except:
+                            Dt,Kt = nan,0.
+                        if Kt > 0:
+                            fxd = fxd + Kt*(xd1-xdk)*(Dt-dist)/dist
+                            fyd = fyd + Kt*(yd1-ydk)*(Dt-dist)/dist
+                        elif dist < diamjk:
                             fxd = fxd + Kspring*(xd1-xdk)*(diamjk-dist)/dist
                             fyd = fyd + Kspring*(yd1-ydk)*(diamjk-dist)/dist
             

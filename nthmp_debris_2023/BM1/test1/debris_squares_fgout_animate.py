@@ -97,8 +97,8 @@ grounding_depth = {}
 drag_factor = {}
 mass = {}
 dradius = {}
-Kspring = 50.
-nsubsteps = 20
+Kspring = 100.
+nsubsteps = 40
 
 
 dbnos = []
@@ -109,8 +109,8 @@ u0 = 0.
 v0 = 0.
 length = 0.6 # * sqrt(2)
 
-xg1 = [34.34] #, 34.94]
-yg1 = [0.82] #, 0.82]
+xg1 = [34.24,34.94]
+yg1 = [0.82, 0.12, 0.82]
 xgg = [35.54]
 ygg = [1.22]
 for xg in xg1:
@@ -118,7 +118,7 @@ for xg in xg1:
         xgg.append(xg)
         ygg.append(yg)
     
-grounding_depth_common = 0. #0.04
+grounding_depth_common = 0.0 #0.04
 drag_factor_common = 1.
 mass_common = 1.
 dradius_common = 0.2
@@ -127,17 +127,23 @@ dradius_common = 0.2
 #Ktether_common = 50.
 
 def tether(dbno1,dbno2):
-    if abs(dbno1-dbno2) in [1000,3000]:
-        # adjecent sides of square
-        Dtether = length
-        Ktether = 50.
-    elif abs(dbno1-dbno2) == 2000:
-        # diagonal of square
-        Dtether = length * sqrt(2)
-        Ktether = 50.
-    else:
-        Dtether = nan
-        Ktether = 0.
+    Dtether = nan
+    Ktether = 0.
+    if mod(dbno1-dbno2,1000)==0:
+        # points in same square
+        if max(dbno1,dbno2) < 4000:
+            if abs(dbno1-dbno2) in [1000,3000]:
+                # adjacent corners of square
+                Dtether = length
+                Ktether = 50.
+            else:
+                # diagonal corners of square
+                Dtether = sqrt(2)*length
+                Ktether = 50.
+        else:
+            # center and a corner of same square
+            Dtether = 0.5*sqrt(2)*length
+            Ktether = 100.
     return Dtether,Ktether
 
 for k in range(len(xgg)):
@@ -149,48 +155,46 @@ for k in range(len(xgg)):
     grounding_depth[dbno] = grounding_depth_common
     drag_factor[dbno] = drag_factor_common
     mass[dbno] = mass_common
-    dradius[dbno] = dradius_common
+    dradius[dbno] = 0.1*length
     
     # add paired particles for square debris:
     dbno1 = dbno + 1000
-    #Ktether[(dbno,dbno1)] = Ktether_common
-    #Ktether[(dbno1,dbno)] = Ktether_common
     db = array([[t0, xgg[k], ygg[k]+length, u0, v0]])
     debris_paths[dbno1] = db
     dbnos.append(dbno1)
     grounding_depth[dbno1] = grounding_depth_common
     drag_factor[dbno1] = drag_factor_common 
     mass[dbno1] = mass_common
-    dradius[dbno1] = dradius_common
+    dradius[dbno1] = 0.1*length
 
     dbno2 = dbno + 2000
-    #Ktether[(dbno1,dbno2)] = Ktether_common
-    #Ktether[(dbno2,dbno1)] = Ktether_common
     db = array([[t0, xgg[k]+length, ygg[k]+length, u0, v0]])
     debris_paths[dbno2] = db
     dbnos.append(dbno2)
     grounding_depth[dbno2] = grounding_depth_common
     drag_factor[dbno2] = drag_factor_common 
     mass[dbno2] = mass_common
-    dradius[dbno2] = dradius_common
+    dradius[dbno2] = 0.1*length
     
     dbno3 = dbno + 3000
-    #Ktether[(dbno2,dbno3)] = Ktether_common
-    #Ktether[(dbno3,dbno2)] = Ktether_common
-    #Ktether[(dbno,dbno3)] = Ktether_common
-    #Ktether[(dbno3,dbno)] = Ktether_common
-    #Ktether[(dbno,dbno2)] = Ktether_common
-    #Ktether[(dbno2,dbno)] = Ktether_common
-    #Ktether[(dbno1,dbno3)] = Ktether_common
-    #Ktether[(dbno3,dbno1)] = Ktether_common
     db = array([[t0, xgg[k]+length, ygg[k], u0, v0]])
     debris_paths[dbno3] = db
     dbnos.append(dbno3)
     grounding_depth[dbno3] = grounding_depth_common
     drag_factor[dbno3] = drag_factor_common 
     mass[dbno3] = mass_common
-    dradius[dbno3] = dradius_common
+    dradius[dbno3] = 0.1*length
     
+    # center point:
+    dbno4 = dbno + 4000  
+    db = array([[t0, xgg[k]+0.5*length, ygg[k]+0.5*length, u0, v0]])
+    debris_paths[dbno4] = db
+    dbnos.append(dbno4)
+    grounding_depth[dbno4] = 0.04
+    drag_factor[dbno4] = drag_factor_common 
+    mass[dbno4] = mass_common
+    dradius[dbno4] = 0.5*length
+
 for dbno in dbnos:
     if mod(dbno,1000) == 0:
         mass[dbno] = 1e6
@@ -215,10 +219,12 @@ def make_dbABCD(t, debris_paths, dbnosA):
         dbnoB = dbnoA + 1000
         dbnoC = dbnoA + 2000
         dbnoD = dbnoA + 3000
+        dbnoE = dbnoA + 4000
         dbA = debris_paths[dbnoA]
         dbB = debris_paths[dbnoB]
         dbC = debris_paths[dbnoC]
         dbD = debris_paths[dbnoD]
+        dbE = debris_paths[dbnoE]
         try:
             j = where(abs(dbA[:,0]-t) < 1e-6)[0].max()
         except:
@@ -233,8 +239,10 @@ def make_dbABCD(t, debris_paths, dbnosA):
             yC = dbC[j,2]
             xD = dbD[j,1]
             yD = dbD[j,2]
-            xdAB = xdAB + [xA,xB,xC,xD,xA,nan]
-            ydAB = ydAB + [yA,yB,yC,yD,yA,nan]
+            xE = dbE[j,1]
+            yE = dbE[j,2]
+            xdAB = xdAB + [xA,xB,xC,xD,xA,xE,nan]
+            ydAB = ydAB + [yA,yB,yC,yD,yA,yE,nan]
             #import pdb; pdb.set_trace()
     xdAB = array(xdAB)
     ydAB = array(ydAB)
@@ -261,7 +269,53 @@ ax.set_ylim(plot_extent[2:])
 
 ax.plot([x1b,x2b,x2b,x1b,x1b], [y1b,y1b,y2b,y2b,y1b], 'g')
 
-if 1:
+imqoi = 'Depth'
+
+if imqoi=='Depth':
+    # depth
+
+    a = 1.
+    cmap_depth = mpl.colors.ListedColormap([
+                    [.6,.6,1,a],[.3,.3,1,a],[0,0,1,a], [1,.8,.8,a],[1,.6,.6,a],
+                    [1,0,0,a]])
+
+    # Set color for value exceeding top of range to purple:
+    cmap_depth.set_over(color=[1,0,1,a])
+
+    if bgimage:
+        # Set color to transparent where s < 1e-3:
+        cmap_depth.set_under(color=[1,1,1,0])
+    else:
+        # Set color to white where s < 1e-3:
+        cmap_depth.set_under(color=[1,1,1,a])
+
+    #bounds_depth = np.array([0,1,2,3,4,5])
+    bounds_depth = np.array([0,0.04,0.08,0.12,0.16,0.20,0.24])
+    norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
+    
+    #eta_water = where(fgout.h>0, fgout.h, nan)
+    eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
+    
+    im = imshow(flipud(eta_water.T), extent=fgout.extent_edges,
+                    #cmap=geoplot.tsunami_colormap)
+                    cmap=cmap_depth, norm=norm_depth)
+    im.set_clim(-5,5)
+                
+    cb = colorbar(im, extend='max', shrink=0.7)
+    cb.set_label('meters')
+    #contour(fgout.X, fgout.Y, fgout.B, [0], colors='g', linewidths=0.5)
+
+    ax.set_aspect(1./cos(ylat*pi/180.))
+    ticklabel_format(useOffset=False)
+    xticks(rotation=20)
+    ax.set_xlim(plot_extent[:2])
+    ax.set_ylim(plot_extent[2:])
+
+    t = fgout.t
+    t_str = timeformat(t)
+    title_text = title('%s at t = %s' % (imqoi,t_str))
+    
+else:
     # speed
     s_units = 'm/s'
     if s_units == 'knots':
@@ -304,50 +358,9 @@ if 1:
 
     t = fgout.t
     t_str = timeformat(t)
-    title_text = title('Speed at t = %s' % t_str)
+    title_text = title('%s at t = %s' % (imqoi,t_str))
 
-if 0:
-    # depth
 
-    a = 1.
-    cmap_depth = mpl.colors.ListedColormap([
-                    [.3,.3,1,a],[0,0,1,a], [1,.8,.8,a],[1,.6,.6,a],
-                    [1,0,0,a]])
-
-    # Set color for value exceeding top of range to purple:
-    cmap_depth.set_over(color=[1,0,1,a])
-
-    if bgimage:
-        # Set color to transparent where s < 1e-3:
-        cmap_depth.set_under(color=[1,1,1,0])
-    else:
-        # Set color to white where s < 1e-3:
-        cmap_depth.set_under(color=[1,1,1,a])
-
-    bounds_depth = np.array([0,1,2,3,4,5])
-    norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
-    
-    #eta_water = where(fgout.h>0, fgout.h, nan)
-    eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.eta)
-    
-    im = imshow(flipud(eta_water.T), extent=fgout.extent_edges,
-                    cmap=geoplot.tsunami_colormap)
-                    #cmap=cmap_depth, norm=norm_depth)
-    im.set_clim(-5,5)
-                
-    cb = colorbar(im, extend='max', shrink=0.7)
-    cb.set_label('meters')
-    #contour(fgout.X, fgout.Y, fgout.B, [0], colors='g', linewidths=0.5)
-
-    ax.set_aspect(1./cos(ylat*pi/180.))
-    ticklabel_format(useOffset=False)
-    xticks(rotation=20)
-    ax.set_xlim(plot_extent[:2])
-    ax.set_ylim(plot_extent[2:])
-
-    t = fgout.t
-    t_str = timeformat(t)
-    title_text = title('Surface/depth at t = %s' % t_str)
 
 xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
 pairs, = ax.plot(xdAB, ydAB, color=color, linestyle='-', linewidth=linewidth)
@@ -378,12 +391,14 @@ def update(num, im, pairs, title_text):
     # title:
     t = fgout.t        
     t_str = timeformat(t)
-    title_text.set_text('Speed at t = %s' % t_str)
+    title_text.set_text('%s at t = %s' % (imqoi,t_str))
     
     # color image:
-    eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.eta)
-    #im.set_data(flipud(eta_water.T))
-    im.set_data(flipud(fgout.s.T))
+    if imqoi == 'Depth':
+        eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
+        im.set_data(flipud(eta_water.T))
+    else:
+        im.set_data(flipud(fgout.s.T))
 
     # particle locations:
     
