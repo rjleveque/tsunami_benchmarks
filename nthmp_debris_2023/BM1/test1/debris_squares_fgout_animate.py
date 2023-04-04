@@ -42,7 +42,7 @@ print('Looking for output in ',outdir)
 output_format = 'binary32'
 
 # List of frames to use for making debris paths and animation:
-fgframes = range(10,40)
+fgframes = range(10,71)
 #fgframes = [1,20,40]
 
 
@@ -118,9 +118,9 @@ for xg in xg1:
         xgg.append(xg)
         ygg.append(yg)
     
-grounding_depth_common = 0.0 #0.04
+grounding_depth_common = 0.04
 drag_factor_common = 1.
-mass_common = 1.
+mass_common = 10.
 dradius_common = 0.2
 
 #Ktether = {}
@@ -202,7 +202,30 @@ for dbno in dbnos:
 print('Created %i initial debris particles' % len(dbnos))
 #import pdb; pdb.set_trace()
 
-                     
+if 1:
+    # add massless tracer particles:
+
+    xgg = []
+    ygg = []
+    for xg in linspace(34.1,38.1,5):
+        for yg in linspace(-2,2,17):
+            xgg.append(xg)
+            ygg.append(yg)
+            
+    dbnosT = []             
+    for k in range(len(xgg)):
+        dbno = 5000+k
+        db = array([[t0, xgg[k], ygg[k], u0, v0]])
+        debris_paths[dbno] = db
+        dbnos.append(dbno)
+        dbnosT.append(dbno)  # debris at lower left corner
+        grounding_depth[dbno] = 0.
+        drag_factor[dbno] = None
+        mass[dbno] = 1.
+        dradius[dbno] = None
+        
+    print('Created %i tracer particles' % len(dbnosT))
+
 # Compute debris path for each particle by using all the fgout frames
 # in the list fgframes (first frame should be frameno0 used to set t0 above):
 
@@ -250,8 +273,27 @@ def make_dbABCD(t, debris_paths, dbnosA):
     #print('+++ ydAB = ',ydAB)
     return xdAB,ydAB
 
-
-
+def make_dbT(t, debris_paths, dbnosT):
+    xdT = []
+    ydT = []
+    
+    for k in range(len(dbnosT)):
+        dbnoT = dbnosT[k]
+        dbT = debris_paths[dbnoT]
+        try:
+            j = where(abs(dbT[:,0]-t) < 1e-6)[0].max()
+        except:
+            print('Did not find path for dbno=%i at t = %.3f' % (dbno,t))
+            j = -1
+        if j > -1:
+            xA = dbT[j,1]
+            yA = dbT[j,2]
+            xdT.append(xA)
+            ydT.append(yA)
+    xdT = array(xdT)
+    ydT = array(ydT)
+    return xdT,ydT            
+            
 # First initialize plot with data from initial frame,
 # do this in a way that returns an object for each plot attribute that
 # will need to be changed in subsequent frames.
@@ -310,7 +352,7 @@ if imqoi=='Depth':
     xticks(rotation=20)
     ax.set_xlim(plot_extent[:2])
     ax.set_ylim(plot_extent[2:])
-
+    
     t = fgout.t
     t_str = timeformat(t)
     title_text = title('%s at t = %s' % (imqoi,t_str))
@@ -360,24 +402,28 @@ else:
     t_str = timeformat(t)
     title_text = title('%s at t = %s' % (imqoi,t_str))
 
-
+xdT,ydT = make_dbT(t, debris_paths, dbnosT)
+dbpoints, = ax.plot(xdT,ydT,'.',color='yellow',markersize=3)
+#print('+++ dbpoints xdT=', xdT)
+#print('+++ dbpoints ydT=', ydT)
 
 xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
 pairs, = ax.plot(xdAB, ydAB, color=color, linestyle='-', linewidth=linewidth)
 
 
-print('+++ pairs = ',pairs)
+
+#print('+++ pairs = ',pairs)
 
 # The function update below should have arguments num (for the frame number)
 # plus things listed here in fargs.
 
-fargs = (im,pairs,title_text)
+fargs = (im,pairs,dbpoints,title_text)
 
 # fargs should be initialized above and are the plot Artist objects 
 # whose data change from one frame to the next.
 
 
-def update(num, im, pairs, title_text):
+def update(num, im, pairs, dbpoints, title_text):
     
     fgframe = fgframes[num]
     # note: uses fgframes to specify fgout frames to use
@@ -405,8 +451,11 @@ def update(num, im, pairs, title_text):
     xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
     pairs.set_data(xdAB, ydAB)
         
+    xdT,ydT = make_dbT(t, debris_paths, dbnosT)
+    dbpoints.set_data(xdT,ydT)
+
     # must now return all the objects listed in fargs:
-    return im,pairs,title_text
+    return im,pairs,dbpoints,title_text
 
 print('Making anim...')
 anim = animation.FuncAnimation(fig, update,

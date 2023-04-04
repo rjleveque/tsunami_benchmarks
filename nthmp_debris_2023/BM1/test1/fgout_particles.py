@@ -549,53 +549,72 @@ def move_debris_substeps(dbnos, debris_paths, fgout1, fgout2, drag_factor=None,
             u1 = u_fcn(xd1,yd1,t1)
             v1 = v_fcn(xd1,yd1,t1)
             
-            # compute force on debris
-            fxd = df*(u1 - ud1)  
-            fyd = df*(v1 - vd1)
+            if df is None:
+                # set debris velocity equal to fluid velocity (tracer particle)
+                ud2 = u1
+                vd2 = v1
+            else:
+                
+                # compute force on debris
+                fxd = df*(u1 - ud1)  
+                fyd = df*(v1 - vd1)
+                
+                if (dradius[dbno] is not None):
+                    # compute inter-particle forces:
+                    for dbnok in dbnos:
+                        if (dbnok != dbno) and (dradius[dbnok] is not None) \
+                                           and (drag_factor[dbnok] is not None):
+                            debris_pathk = debris_paths[dbnok]
+                            tk,xdk,ydk,udk,vdk = debris_pathk[-1,:]
+                            # need to fix for lat-lon:
+                            dist = distfunc(xd1,yd1,xdk,ydk)
+                            diamjk = dradius[dbno] + dradius[dbnok]
+                            try:
+                                Dt,Kt = tether(dbno,dbnok)
+                            except:
+                                Dt,Kt = nan,0.
+                            if Kt > 0:
+                                fxd = fxd + Kt*(xd1-xdk)*(Dt-dist)/dist
+                                fyd = fyd + Kt*(yd1-ydk)*(Dt-dist)/dist
+                            elif dist < diamjk:
+                                fxd = fxd + Kspring*(xd1-xdk)*(diamjk-dist)/dist
+                                fyd = fyd + Kspring*(yd1-ydk)*(diamjk-dist)/dist
+                                #print('+++ dbno=%4i, dbnok=%4i, fxd=%g' % (dbno,dbnok,fxd))
+                
+                # acceleration:
+                axd = fxd / massdb
+                ayd = fyd / massdb
             
-            if (dradius is not None):
-                # compute inter-particle forces:
-                for dbnok in dbnos:
-                    if dbnok != dbno:
-                        debris_pathk = debris_paths[dbnok]
-                        tk,xdk,ydk,udk,vdk = debris_pathk[-1,:]
-                        # need to fix for lat-lon:
-                        dist = distfunc(xd1,yd1,xdk,ydk)
-                        diamjk = dradius[dbno] + dradius[dbnok]
-                        try:
-                            Dt,Kt = tether(dbno,dbnok)
-                        except:
-                            Dt,Kt = nan,0.
-                        if Kt > 0:
-                            fxd = fxd + Kt*(xd1-xdk)*(Dt-dist)/dist
-                            fyd = fyd + Kt*(yd1-ydk)*(Dt-dist)/dist
-                        elif dist < diamjk:
-                            fxd = fxd + Kspring*(xd1-xdk)*(diamjk-dist)/dist
-                            fyd = fyd + Kspring*(yd1-ydk)*(diamjk-dist)/dist
-            
-            # acceleration:
-            axd = fxd / massdb
-            ayd = fyd / massdb
-        
-            
-            ud2 = ud1 + dt_substep * axd
-            vd2 = vd1 + dt_substep * ayd
-            
-            #print('+++ dbno = %4i, u1 = %.2f, v1 = %.2f' % (dbno,u1,v1))
-            #print('+++ dbno = %4i, axd = %.2f, ayd = %.2f' % (dbno,axd,ayd))
-            #print('+++ dbno = %4i, ud1 = %.2f, vd1 = %.2f' % (dbno,ud1,vd1))
-            #print('+++ dbno = %4i, ud2 = %.2f, vd2 = %.2f' % (dbno,ud2,vd2))
+                
+                ud2 = ud1 + dt_substep * axd
+                vd2 = vd1 + dt_substep * ayd
+                
+                #print('+++ dbno = %4i, u1 = %.2f, v1 = %.2f' % (dbno,u1,v1))
+                #print('+++ dbno = %4i, axd = %.2f, ayd = %.2f' % (dbno,axd,ayd))
+                #print('+++ dbno = %4i, ud1 = %.2f, vd1 = %.2f' % (dbno,ud1,vd1))
+                #print('+++ dbno = %4i, ud2 = %.2f, vd2 = %.2f' % (dbno,ud2,vd2))
                                                             
             # Take full time step with debris velocities:
             xd2 = xd1 + dt_substep*0.5*(ud1+ud2)
             yd2 = yd1 + dt_substep*0.5*(vd1+vd2)
+            
+            if xd2 > 43.7:
+                xd2 = 43.7  ## Right boundary (SPECIAL)
             
             # Depth and fluid velocity at final time ts2:
             h2 = h_fcn(xd2,yd2,ts2)
             u2 = u_fcn(xd2,yd2,ts2)
             v2 = v_fcn(xd2,yd2,ts2)
 
-            if h2 < gd:
+            # stationary block:
+            epsb = 0.03
+            x1b = 35.54 - epsb
+            x2b = 36.14 + epsb
+            y1b = 1.22 - epsb
+            y2b = y1b + 0.6 + epsb
+            inb = (xd2>=x1b) and (xd2<=x2b) and (yd2>=y1b) and (yd2<=y2b)
+
+            if (h2 < gd) and (not inb):
                 # particle is grounded so velocities set to 0:
                 ud2 = 0.
                 vd2 = 0.        
