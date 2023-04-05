@@ -39,8 +39,9 @@ zeta_fcn = RegularGridInterpolator((time,x), zeta, method='linear',
 u_vel_fcn = RegularGridInterpolator((time,x), u_vel, method='linear',
                 bounds_error=False)
 
+
 picklefile = 'sim_data.pickle'
-data = {'time':time, 'zeta_fcn':zeta_fcn}
+data = {'time':time, 'zeta_fcn':zeta_fcn, 'u_vel_fcn':u_vel_fcn}
 with open(picklefile, 'wb') as f:
     pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 

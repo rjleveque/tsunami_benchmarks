@@ -128,19 +128,29 @@ subroutine bc2amr(val,aux,nrow,ncol,meqn,naux, hx, hy, level, time,   &
         select case(mthbc(1))
             case(0) ! User defined boundary condition
                 
-                !s = 0.72d0 * exp(-0.4*(time - 28.35d0)**2)   ! matches specified wavemaker
-                
-                s = 1.d0 * exp(-0.4*(time - 24.9d0)**2)   ! better match at WG2
-                do j = 1,ncol
-                 do i=1,nxl
-                    do m=1,meqn
-                       aux(1,i,j) = aux(1,2*nxl+1-i,j)  !inserted for bc2amr_noslope
-                       val(m,i,j) = val(m,2*nxl+1-i,j)
-                       enddo
-                    val(2,i,j) = 2.d0*s - val(2,i,j)
-                    enddo
-                 enddo
-      
+                if (time <= 28.d0) then
+                    !s = 0.72d0 * exp(-0.4*(time - 24.9d0)**2)   ! matches specified wavemaker
+                    
+                    s = 1.d0 * exp(-0.4*(time - 24.9d0)**2)   ! better match at WG2
+                    do j = 1,ncol
+                     do i=1,nxl
+                        do m=1,meqn
+                           aux(1,i,j) = aux(1,2*nxl+1-i,j)  !inserted for bc2amr_noslope
+                           val(m,i,j) = val(m,2*nxl+1-i,j)
+                           enddo
+                        val(2,i,j) = 2.d0*s - val(2,i,j)
+                        enddo
+                     enddo
+                else
+                    ! switch to extrapolation
+                    do j = 1, ncol
+                        do i=1, nxl
+                            aux(:, i, j) = aux(:, nxl + 1, j)
+                            val(:, i, j) = val(:, nxl + 1, j)
+                        end do
+                    end do
+                endif
+          
             case(1) ! Zero-order extrapolation
                 do j = 1, ncol
                     do i=1, nxl

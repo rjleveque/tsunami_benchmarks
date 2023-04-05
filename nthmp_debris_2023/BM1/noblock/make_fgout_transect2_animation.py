@@ -21,14 +21,15 @@ from clawpack.geoclaw import fgout_tools
 with open('../sim_data.pickle','rb') as f:
     sim_data = pickle.load(f)
 zeta_fcn = sim_data['zeta_fcn']  # function that interpolates zeta to (t,x)
+u_vel_fcn = sim_data['u_vel_fcn']  # function that interpolates u_vel to (t,x)
 
 outdir = '_output'
 format = 'binary32'  # format of fgout grid output
 
 if 1:
     fgno = 2  # which fgout grid
-    fgframes = range(50,121,2)  # frames of fgout solution to use in animation
-    #fgframes = [60,80]
+    fgframes = range(50,121,1)  # frames of fgout solution to use in animation
+    #fgframes = [114,120]
 if 0:
     fgno = 1
     fgframes = range(1,91,1)  # frames of fgout solution to use in animation
@@ -54,7 +55,7 @@ ax1 = subplot(2,1,1)
 
 ax1.set_xlim(plot_extent[:2])
 ax1.set_ylim(-1, 0.75)
-ax1.grid(True)
+ax1.grid(True, lw=0.5)
 
 #jytrans = 0  # index for y transect, lower edge
 #jytrans = 28  # index for y transect through obstacle
@@ -68,17 +69,17 @@ print('jytrans = %i' % jytrans)
 # piecewise linear bottom:
 xB = array([0,10,17.5,32,43.75])
 yB = array([0,0,0.5,1,1]) - 0.9017
-ax1.plot(xB, yB, 'g-', label='bottom')
+ax1.plot(xB, yB, 'g-', lw=0.7, label='bottom')
 
 eta = ma.masked_where(fgout1.h<0.001, fgout1.eta)
 
-eta_plot, = ax1.plot(fgout1.x,eta[:,jytrans], 'b-', label='surface')
+eta_plot, = ax1.plot(fgout1.x,eta[:,jytrans], 'b-', lw=0.7, label='surface')
 
 tx = vstack((fgout1.t*ones(fgout1.x.shape), fgout1.x)).T
 sim_zeta = zeta_fcn(tx)
-sim_zeta_plot, = ax1.plot(fgout1.x, sim_zeta, 'm-', label='sim zeta')
+sim_zeta_plot, = ax1.plot(fgout1.x, sim_zeta, 'm-', lw=0.7, label='sim zeta')
 
-title_text = ax1.set_title('y = %.3f at time %.2f seconds, frame %i' \
+title_text = ax1.set_title('y = %.3f at time %.3f seconds, frame %i' \
                 % (ytrans,fgout1.t,fgframes[0]), fontsize=8)
 
 #ax.set_aspect(1./cos(ylat*pi/180.))
@@ -88,7 +89,7 @@ xtick_labels = ['' for xt in xtick_pos]
 #ax1.set_xticklabels([])
 ax1.set_xticks(xtick_pos, xtick_labels, fontsize=6)
 ax1.set_ylabel('meters', fontsize=8)
-ytick_pos = list(arange(-1,0.76,0.25))
+ytick_pos = list(arange(-1,0.51,0.25))
 ytick_labels = [str(yt) for yt in ytick_pos]
 ax1.set_yticks(ytick_pos, ytick_labels, fontsize=6)
 ax1.legend(loc='lower right', framealpha=1,fontsize=6)
@@ -96,7 +97,11 @@ ax1.legend(loc='lower right', framealpha=1,fontsize=6)
 
 ax2 = subplot(2,1,2)
 uvel = ma.masked_where(fgout1.h<0.001, fgout1.u)
-u_plot, = ax2.plot(fgout1.x,uvel[:,jytrans], 'b-', label='velocity')
+u_plot, = ax2.plot(fgout1.x, uvel[:,jytrans], 'b-', lw=0.7, label='velocity')
+
+tx = vstack((fgout1.t*ones(fgout1.x.shape), fgout1.x)).T
+sim_u_vel = u_vel_fcn(tx)
+sim_u_plot, = ax2.plot(fgout1.x, sim_u_vel, 'm-', lw=0.7, label='sim u_vel')
 
 ax2.legend(loc='lower left', framealpha=1,fontsize=6)
 ax2.set_xlim(plot_extent[:2])
@@ -108,12 +113,12 @@ ax2.set_yticks(ytick_pos, ytick_labels, fontsize=6)
 xtick_pos = list(arange(0,50,5))
 xtick_labels = [str(xt) for xt in xtick_pos]
 ax2.set_xticks(xtick_pos, xtick_labels, fontsize=6)
-ax2.grid(True)
+ax2.grid(True,lw=0.5)
 
 # The artists that will be updated for subsequent frames:
-update_artists = (eta_plot, u_plot, sim_zeta_plot, title_text)
+update_artists = (eta_plot, u_plot, sim_zeta_plot, sim_u_plot, title_text)
     
-    
+#import pdb; pdb.set_trace()
         
 def update(fgframeno, *update_artists):
     """
@@ -125,10 +130,10 @@ def update(fgframeno, *update_artists):
     print('Updating plot at time %s' % timedelta(seconds=fgout.t))
     
     # unpack update_artists (must agree with definition above):
-    eta_plot, u_plot, sim_zeta_plot, title_text = update_artists
+    eta_plot, u_plot, sim_zeta_plot, sim_u_plot, title_text = update_artists
         
     # reset title to current time:
-    title_text = ax1.set_title('y = %.3f at time %.2f seconds, frame %i' \
+    title_text = ax1.set_title('y = %.3f at time %.3f seconds, frame %i' \
                     % (ytrans,fgout.t,fgframeno), fontsize=8)
 
     # reset surface eta to current state:
@@ -144,10 +149,13 @@ def update(fgframeno, *update_artists):
     tx = vstack((fgout.t*ones(fgout.x.shape), fgout.x)).T
     sim_zeta = zeta_fcn(tx)
     sim_zeta_plot.set_ydata(sim_zeta)
+    
+    sim_u_vel = u_vel_fcn(tx)
+    sim_u_plot.set_ydata(sim_u_vel)
 
     u_plot.set_ydata(fgout.u[:,jytrans])
         
-    update_artists = (eta_plot, u_plot, sim_zeta_plot, title_text)
+    update_artists = (eta_plot, u_plot, sim_zeta_plot, sim_u_plot, title_text)
     return update_artists
 
 def plot_fgframe(fgframeno):
