@@ -90,6 +90,9 @@ subroutine bc2amr(val,aux,nrow,ncol,meqn,naux, hx, hy, level, time,   &
 
     use amr_module, only: mthbc, xlower, ylower, xupper, yupper
     use amr_module, only: xperdom,yperdom,spheredom
+    use geoclaw_module, only: grav
+    use setprob_module, only: t_WG2, zeta_WG2, mt_WG2
+
 
     implicit none
 
@@ -104,8 +107,8 @@ subroutine bc2amr(val,aux,nrow,ncol,meqn,naux, hx, hy, level, time,   &
     ! Local storage
     integer :: i, j, ibeg, jbeg, nxl, nxr, nyb, nyt
     real(kind=8) :: hxmarg, hymarg
-    real(kind=8) :: s
-    integer :: m
+    real(kind=8) :: s, eta, a1, a2
+    integer :: m,k
 
     hxmarg = hx * .01d0
     hymarg = hy * .01d0
@@ -129,16 +132,23 @@ subroutine bc2amr(val,aux,nrow,ncol,meqn,naux, hx, hy, level, time,   &
             case(0) ! User defined boundary condition
                 
                 if (time <= 28.d0) then
-                    !s = 0.72d0 * exp(-0.4*(time - 24.9d0)**2)   ! matches specified wavemaker
-                    
-                    s = 1.d0 * exp(-0.4*(time - 24.9d0)**2)   ! better match at WG2
+                    ! interpolate from WG2 data to current time:
+                    k = 2
+                    do while ((time > t_WG2(k)) .and. (k < mt_WG2))
+                        k = k+1
+                    enddo
+                    a1 = (t_WG2(k) - time) / (t_WG2(k) - t_WG2(k-1))
+                    a2 = 1.d0 - a1
+                    eta = a1*zeta_WG2(k-1) + a2*zeta_WG2(k)
+                    !write(6,*) '+++ time,k,a1,a2,eta:',time,k,a1,a2,eta
+                    !write(6,*) '+++ grav,aux: ',grav, aux(1,nxl+1,1)
+
                     do j = 1,ncol
                      do i=1,nxl
-                        do m=1,meqn
-                           aux(1,i,j) = aux(1,2*nxl+1-i,j)  !inserted for bc2amr_noslope
-                           val(m,i,j) = val(m,2*nxl+1-i,j)
-                           enddo
-                        val(2,i,j) = 2.d0*s - val(2,i,j)
+                        aux(:, i, j) = aux(:, nxl + 1, j)
+                        val(1,i,j) = eta - aux(1,i,j)
+                        val(2,i,j) = sqrt(grav * val(1,i,j)) * eta
+                        val(3,i,j) = 0.d0
                         enddo
                      enddo
                 else

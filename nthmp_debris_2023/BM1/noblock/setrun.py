@@ -55,7 +55,7 @@ def setrun(claw_pkg='geoclaw'):
     clawdata.num_dim = num_dim
 
     # Lower and upper edge of computational domain:
-    clawdata.lower[0] = 0.75
+    clawdata.lower[0] = 2.25  # location of WG2 is 2.26
     clawdata.upper[0] = 43.75
 
     clawdata.lower[1] = -13.25
@@ -63,7 +63,7 @@ def setrun(claw_pkg='geoclaw'):
 
 
     # Number of grid cells: Coarsest grid
-    clawdata.num_cells[0] = 86
+    clawdata.num_cells[0] = 83
     clawdata.num_cells[1] = 53
 
 

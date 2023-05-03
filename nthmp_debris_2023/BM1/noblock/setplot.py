@@ -36,41 +36,6 @@ def setplot(plotdata=None):
 
     plotdata.format = 'ascii'                # Format of output
 
-    print('Reading all gauges...')
-    gauge_solutions = particle_tools.read_gauges(gaugenos='all', 
-                                                 outdir=plotdata.outdir)
-
-    gaugenos_lagrangian = [k for k in gauge_solutions.keys() \
-                if gauge_solutions[k].gtype=='lagrangian']
-    gaugenos_stationary = [k for k in gauge_solutions.keys() \
-                if gauge_solutions[k].gtype=='stationary']
-
-    #print('+++ gaugenos_lagrangian: ',gaugenos_lagrangian)
-    
-    def add_particles(current_data):
-        t = current_data.t
-
-        # plot recent path:
-        t_path_length = 0.5   # length of path trailing particle
-        kwargs_plot_path = {'linewidth':1, 'color':'k'}
-        particle_tools.plot_paths(gauge_solutions, 
-                                  t1=t-t_path_length, t2=t, 
-                                  gaugenos=gaugenos_lagrangian, 
-                                  kwargs_plot=kwargs_plot_path)
-
-        # plot current location:
-        kwargs_plot_point = {'marker':'o','markersize':3,'color':'k'}
-        particle_tools.plot_particles(gauge_solutions, t, 
-                                      gaugenos=gaugenos_lagrangian, 
-                                      kwargs_plot=kwargs_plot_point)  
-
-        # plot any stationary gauges:
-        gaugetools.plot_gauge_locations(current_data.plotdata, \
-             gaugenos=gaugenos_stationary, format_string='kx', add_labels=False)
-        kwargs={'loc':'upper left'}
-        legend_tools.add_legend(['Lagrangian particle','Stationary gauge'],
-                linestyles=['',''], markers=['o','x'],
-                loc='lower right', framealpha=0.5, fontsize=10)
 
 
     def speed(current_data):

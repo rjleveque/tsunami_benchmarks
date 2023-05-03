@@ -28,7 +28,7 @@ format = 'binary32'  # format of fgout grid output
 
 if 1:
     fgno = 2  # which fgout grid
-    fgframes = range(50,121,1)  # frames of fgout solution to use in animation
+    fgframes = range(41,121,1)  # frames of fgout solution to use in animation
     #fgframes = [114,120]
 if 0:
     fgno = 1
@@ -77,7 +77,7 @@ eta_plot, = ax1.plot(fgout1.x,eta[:,jytrans], 'b-', lw=0.7, label='surface')
 
 tx = vstack((fgout1.t*ones(fgout1.x.shape), fgout1.x)).T
 sim_zeta = zeta_fcn(tx)
-sim_zeta_plot, = ax1.plot(fgout1.x, sim_zeta, 'm-', lw=0.7, label='sim zeta')
+sim_zeta_plot, = ax1.plot(fgout1.x, sim_zeta, 'r-', lw=0.7, label='sim zeta')
 
 title_text = ax1.set_title('y = %.3f at time %.3f seconds, frame %i' \
                 % (ytrans,fgout1.t,fgframes[0]), fontsize=8)
@@ -101,7 +101,7 @@ u_plot, = ax2.plot(fgout1.x, uvel[:,jytrans], 'b-', lw=0.7, label='velocity')
 
 tx = vstack((fgout1.t*ones(fgout1.x.shape), fgout1.x)).T
 sim_u_vel = u_vel_fcn(tx)
-sim_u_plot, = ax2.plot(fgout1.x, sim_u_vel, 'm-', lw=0.7, label='sim u_vel')
+sim_u_plot, = ax2.plot(fgout1.x, sim_u_vel, 'r-', lw=0.7, label='sim u_vel')
 
 ax2.legend(loc='lower left', framealpha=1,fontsize=6)
 ax2.set_xlim(plot_extent[:2])
@@ -180,7 +180,7 @@ if __name__ == '__main__':
     anim = make_anim()
     
     # Output files:
-    name = 'fgout_animation_transect_obstacle'
+    name = 'fgout_animation_transect'
 
     fname_mp4 = name + '.mp4'
 
