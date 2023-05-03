@@ -1,6 +1,8 @@
 """
 Plot fgout frames and also motion of particles using velocities
 interpolated from fgout.
+
+Rotate so x in vertical direction as in Figures from paper and videos.
 """
 
 import sys
@@ -14,12 +16,6 @@ import os,sys
 from matplotlib import colors
 import matplotlib.animation as animation
 from clawpack.visclaw import animation_tools, plottools, geoplot
-
-
-#import postproc_fgout as P
-#CMH = os.environ['CMH'] 
-#sys.path.append(os.path.join(CMH,'common_python'))   
-#import fgout_tools2
 import fgout_particles as P
 
 
@@ -43,11 +39,16 @@ output_format = 'binary32'
 
 # List of frames to use for making debris paths and animation:
 fgframes = range(10,71)
-#fgframes = [1,20,40]
+#fgframes = [30,31]
 
 
 bgimage = None
-plot_extent = [34, 43.75, -3, 3]
+#plot_extent = [34, 43.75, -3, 3]
+xlimits = [-3, 3]
+ylimits = [43.75, 34]
+#flipud = lambda A: fliplr(flipud(A))  # x is vertical in plots
+flipud = lambda A: A
+
 color = 'k'
 linewidth = 2
 
@@ -69,6 +70,10 @@ frameno0 = fgframes[0]
 fgout0 = fgout_grid.read_frame(frameno0)
 t0 = fgout0.t
 
+x1fg,x2fg,y1fg,y2fg = fgout0.extent_edges
+fgout_extent = [y1fg,y2fg,x2fg,x1fg]  # for rotated
+print('fgout0.extent_edges = ', fgout0.extent_edges)
+print('fgout_extent = ', fgout_extent)
 
 def timeformat(t):
     """
@@ -302,14 +307,13 @@ def make_dbT(t, debris_paths, dbnosT):
 # The background image, colorbar, etc. do not change.
 
 fgout = fgout0
-ylat = fgout.Y.mean()  # for aspect ratio of plots
 
 fig,ax = subplots(figsize=(8,7))
 
-ax.set_xlim(plot_extent[:2])
-ax.set_ylim(plot_extent[2:])
+ax.set_xlim(xlimits)
+ax.set_ylim(ylimits)
 
-ax.plot([x1b,x2b,x2b,x1b,x1b], [y1b,y1b,y2b,y2b,y1b], 'g')
+ax.plot([y1b,y1b,y2b,y2b,y1b], [x1b,x2b,x2b,x1b,x1b], 'g')
 
 imqoi = 'Depth'
 
@@ -338,7 +342,7 @@ if imqoi=='Depth':
     #eta_water = where(fgout.h>0, fgout.h, nan)
     eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
     
-    im = imshow(flipud(eta_water.T), extent=fgout.extent_edges,
+    im = imshow(flipud(eta_water), extent=fgout_extent,
                     #cmap=geoplot.tsunami_colormap)
                     cmap=cmap_depth, norm=norm_depth)
     im.set_clim(-5,5)
@@ -347,11 +351,11 @@ if imqoi=='Depth':
     cb.set_label('meters')
     #contour(fgout.X, fgout.Y, fgout.B, [0], colors='g', linewidths=0.5)
 
-    ax.set_aspect(1./cos(ylat*pi/180.))
+    #ax.set_aspect(1./cos(ylat*pi/180.))
     ticklabel_format(useOffset=False)
     xticks(rotation=20)
-    ax.set_xlim(plot_extent[:2])
-    ax.set_ylim(plot_extent[2:])
+    ax.set_xlim(xlimits)
+    ax.set_ylim(ylimits)
     
     t = fgout.t
     t_str = timeformat(t)
@@ -386,7 +390,7 @@ else:
 
     norm_speed = colors.BoundaryNorm(bounds_speed, cmap_speed.N)
 
-    im = imshow(flipud(s.T), extent=fgout.extent_edges,
+    im = imshow(flipud(s), extent=fgout_extent,
                 cmap=cmap_speed, norm=norm_speed)
     cb = colorbar(im, extend='max', shrink=0.7)
     cb.set_label(s_units)
@@ -395,20 +399,20 @@ else:
     #ax.set_aspect(1./cos(ylat*pi/180.))
     ticklabel_format(useOffset=False)
     xticks(rotation=20)
-    ax.set_xlim(plot_extent[:2])
-    ax.set_ylim(plot_extent[2:])
+    ax.set_xlim(xlimits)
+    ax.set_ylim(ylimits)
 
     t = fgout.t
     t_str = timeformat(t)
     title_text = title('%s at t = %s' % (imqoi,t_str))
 
 xdT,ydT = make_dbT(t, debris_paths, dbnosT)
-dbpoints, = ax.plot(xdT,ydT,'.',color='yellow',markersize=3)
+dbpoints, = ax.plot(ydT,xdT,'.',color='yellow',markersize=3)
 #print('+++ dbpoints xdT=', xdT)
 #print('+++ dbpoints ydT=', ydT)
 
 xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
-pairs, = ax.plot(xdAB, ydAB, color=color, linestyle='-', linewidth=linewidth)
+pairs, = ax.plot(ydAB, xdAB, color=color, linestyle='-', linewidth=linewidth)
 
 
 
@@ -442,17 +446,17 @@ def update(num, im, pairs, dbpoints, title_text):
     # color image:
     if imqoi == 'Depth':
         eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
-        im.set_data(flipud(eta_water.T))
+        im.set_data(flipud(eta_water))
     else:
-        im.set_data(flipud(fgout.s.T))
+        im.set_data(flipud(fgout.s))
 
     # particle locations:
     
     xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
-    pairs.set_data(xdAB, ydAB)
+    pairs.set_data(ydAB, xdAB)
         
     xdT,ydT = make_dbT(t, debris_paths, dbnosT)
-    dbpoints.set_data(xdT,ydT)
+    dbpoints.set_data(ydT,xdT)
 
     # must now return all the objects listed in fargs:
     return im,pairs,dbpoints,title_text
@@ -463,7 +467,7 @@ anim = animation.FuncAnimation(fig, update,
                                fargs=fargs,
                                interval=200, blit=True)
 
-fname_mp4 = 'debris_pairs.mp4'
+fname_mp4 = 'debris_squares.mp4'
 fps = 5
 print('Making mp4...')
 animation_tools.make_mp4(anim, fname_mp4, fps)
