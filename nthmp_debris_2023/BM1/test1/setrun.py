@@ -427,11 +427,11 @@ def setgeo(rundata):
     fgout.point_style = 2       # will specify a 2d grid of points
     fgout.output_format = 'binary32'  # 4-byte, float32
     fgout.nx = 860
-    fgout.ny = 30
+    fgout.ny = 2  # with cell centers y = -5 and 1.62
     fgout.x1 = 0.75  # specify edges (fgout pts will be cell centers)
     fgout.x2 = 43.75
-    fgout.y1 = 0. #-4.
-    fgout.y2 = 3. #6.
+    fgout.y1 = -8.31
+    fgout.y2 = 4.93
     fgout.tstart = 0.
     fgout.tend = 60.
     fgout.nout = 120
