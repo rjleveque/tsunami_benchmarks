@@ -58,7 +58,7 @@ x2b = 36.14
 y1b = 1.22
 y2b = y1b + 0.6
 
-outdir = '_output'
+outdir = '../SWE2d/_output_2023-05-05'
 format = 'binary32'  # format of fgout grid output
 
 # Instantiate object for reading fgout frames:
@@ -321,12 +321,15 @@ if imqoi=='Depth':
     # depth
 
     a = 1.
+    #cmap_depth = mpl.colors.ListedColormap([
+    #                [.6,.6,1,a],[.3,.3,1,a],[0,0,1,a], [1,.8,.8,a],[1,.6,.6,a],
+    #                [1,0,0,a]])
     cmap_depth = mpl.colors.ListedColormap([
-                    [.6,.6,1,a],[.3,.3,1,a],[0,0,1,a], [1,.8,.8,a],[1,.6,.6,a],
-                    [1,0,0,a]])
-
-    # Set color for value exceeding top of range to purple:
-    cmap_depth.set_over(color=[1,0,1,a])
+                    [.8,.8,1,a],[.7,.7,1,a],[.6,.6,1,a],[.5,.5,1,a]])
+                    
+    # Set color for value exceeding top of range:
+    cmap_depth.set_over(color=[0.4,0.4,1,a])
+    
 
     if bgimage:
         # Set color to transparent where s < 1e-3:
@@ -336,7 +339,9 @@ if imqoi=='Depth':
         cmap_depth.set_under(color=[1,1,1,a])
 
     #bounds_depth = np.array([0,1,2,3,4,5])
-    bounds_depth = np.array([0,0.04,0.08,0.12,0.16,0.20,0.24])
+    #bounds_depth = np.array([0,0.04,0.08,0.12,0.16,0.20,0.24])
+    bounds_depth = np.array([0.001,0.04,0.08,0.12,0.16])
+
     norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
     
     #eta_water = where(fgout.h>0, fgout.h, nan)
@@ -407,7 +412,7 @@ else:
     title_text = title('%s at t = %s' % (imqoi,t_str))
 
 xdT,ydT = make_dbT(t, debris_paths, dbnosT)
-dbpoints, = ax.plot(ydT,xdT,'.',color='yellow',markersize=3)
+dbpoints, = ax.plot(ydT,xdT,'.',color='b',markersize=4)
 #print('+++ dbpoints xdT=', xdT)
 #print('+++ dbpoints ydT=', ydT)
 
