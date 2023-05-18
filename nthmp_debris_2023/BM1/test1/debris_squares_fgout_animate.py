@@ -16,8 +16,9 @@ import os,sys
 from matplotlib import colors
 import matplotlib.animation as animation
 from clawpack.visclaw import animation_tools, plottools, geoplot
+#import fgout_particles as P
+sys.path.insert(0,'../../common_python')
 import fgout_particles as P
-
 
 if 1:
     from clawpack.geoclaw import fgout_tools
@@ -38,7 +39,8 @@ print('Looking for output in ',outdir)
 output_format = 'binary32'
 
 # List of frames to use for making debris paths and animation:
-fgframes = range(10,121)
+#fgframes = range(10,121)
+fgframes = range(10,21)
 #fgframes = [30,31]
 
 
@@ -134,7 +136,7 @@ dradius_common = 0.2
 def tether(dbno1,dbno2):
     Dtether = nan
     Ktether = 0.
-    if mod(dbno1-dbno2,1000)==0:
+    if dbno1<9000 and dbno2<9000 and mod(dbno1-dbno2,1000)==0:
         # points in same square
         if max(dbno1,dbno2) < 4000:
             if abs(dbno1-dbno2) in [1000,3000]:
@@ -207,6 +209,32 @@ for dbno in dbnos:
 print('Created %i initial debris particles' % len(dbnos))
 #import pdb; pdb.set_trace()
 
+dbnosC = []
+
+if 1:
+    # add particles for square obstacle:
+    xg1 = [x1b+0.15, x1b+0.45]
+    yg1 = [y1b+0.15, y1b+0.45]
+    xgg = []
+    ygg = []
+    for xg in xg1:
+        for yg in yg1:
+            xgg.append(xg)
+            ygg.append(yg)
+
+    for k in range(len(xgg)):
+        db = array([[t0, xgg[k], ygg[k], u0, v0]])
+        dbno = 9000 + k
+        debris_paths[dbno] = db
+        dbnos.append(dbno)
+        dbnosC.append(dbno)
+
+        grounding_depth[dbno] = 100.
+        drag_factor[dbno] = 0.
+        mass[dbno] = 1.
+        dradius[dbno] = 0.149
+        mass[dbno] = 1e6
+
 if 1:
     # add massless tracer particles:
 
@@ -234,10 +262,13 @@ if 1:
 # Compute debris path for each particle by using all the fgout frames
 # in the list fgframes (first frame should be frameno0 used to set t0 above):
 
+
+wface = 0.
+hface = 0.
 debris_paths = P.make_debris_paths_substeps(fgout_grid, fgframes, debris_paths,
                       dbnos, drag_factor, grounding_depth, 
-                      mass, dradius, Kspring, tether, nsubsteps)
-
+                      mass, wface, hface, dradius, Kspring, tether, nsubsteps)
+                      
 def make_dbABCD(t, debris_paths, dbnosA):
     xdAB = []
     ydAB = []
@@ -298,7 +329,38 @@ def make_dbT(t, debris_paths, dbnosT):
     xdT = array(xdT)
     ydT = array(ydT)
     return xdT,ydT            
-            
+
+
+def make_dbDisks(t, debris_paths, dbnosC):
+    xdDisks = []
+    ydDisks = []
+    
+    theta = linspace(0, 2*pi, 50)
+    
+    for k in range(len(dbnosC)):
+        dbnoC = dbnosC[k]  # center of disk
+        dbC = debris_paths[dbnoC]
+        try:
+            rad = dradius[dbnoC]
+        except:
+            rad = dradius_common
+        try:
+            j = where(abs(dbC[:,0]-t) < 1e-6)[0].max()
+        except:
+            print('Did not find path for dbno=%i at t = %.3f' % (dbno,t))
+            j = -1
+        if j > -1:
+            xC = dbC[j,1]
+            yC = dbC[j,2]
+            xcirc = xC + rad*cos(theta)
+            ycirc = yC + rad*sin(theta)
+            xdDisks = xdDisks + list(xcirc) + [nan]
+            ydDisks = ydDisks + list(ycirc) + [nan]
+    
+    xdDisks = array(xdDisks)
+    ydDisks = array(ydDisks)
+    return xdDisks,ydDisks  
+                
 # First initialize plot with data from initial frame,
 # do this in a way that returns an object for each plot attribute that
 # will need to be changed in subsequent frames.
@@ -419,20 +481,27 @@ dbpoints, = ax.plot(ydT,xdT,'.',color='b',markersize=4)
 xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
 pairs, = ax.plot(ydAB, xdAB, color=color, linestyle='-', linewidth=linewidth)
 
+#xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosA)
+#disks1, = ax.plot(xdDisks, ydDisks, color='r', linestyle='-', linewidth=1)
 
+#xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosB)
+#disks2, = ax.plot(xdDisks, ydDisks, color='yellow', linestyle='-', linewidth=2)
+
+xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosC)
+disks3, = ax.plot(xdDisks, ydDisks, color='k', linestyle='-', linewidth=1)
 
 #print('+++ pairs = ',pairs)
 
 # The function update below should have arguments num (for the frame number)
 # plus things listed here in fargs.
 
-fargs = (im,pairs,dbpoints,title_text)
+fargs = (im,pairs,disks3,dbpoints,title_text)
 
 # fargs should be initialized above and are the plot Artist objects 
 # whose data change from one frame to the next.
 
 
-def update(num, im, pairs, dbpoints, title_text):
+def update(num, im, pairs,disks3, dbpoints, title_text):
     
     fgframe = fgframes[num]
     # note: uses fgframes to specify fgout frames to use
@@ -463,8 +532,12 @@ def update(num, im, pairs, dbpoints, title_text):
     xdT,ydT = make_dbT(t, debris_paths, dbnosT)
     dbpoints.set_data(ydT,xdT)
 
+    if len(dbnosC) > 0:
+        xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosC)
+        disks3.set_data(ydDisks, xdDisks)
+        
     # must now return all the objects listed in fargs:
-    return im,pairs,dbpoints,title_text
+    return im,pairs,disks3,dbpoints,title_text
 
 print('Making anim...')
 anim = animation.FuncAnimation(fig, update,
