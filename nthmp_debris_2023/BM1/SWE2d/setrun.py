@@ -308,8 +308,8 @@ def setrun(claw_pkg='geoclaw'):
     regions = rundata.regiondata.regions
     # to specify regions of refinement append lines of the form
     #  [minlevel,maxlevel,t1,t2,x1,x2,y1,y2]
-    regions.append([1,1,0,1e9,0,50,-15,15])
-    regions.append([2,3,35,1e9,32,50,-3,6])
+    regions.append([1,1,0,1e9,0,1e9,-15,15])
+    regions.append([2,3,33,1e9,31,1e9,-3,6])
 
     # == setgauges.data values ==
     # for gauges append lines of the form  [gaugeno, x, y, t1, t2]
@@ -392,6 +392,7 @@ def setgeo(rundata):
     dtopo_data = rundata.dtopo_data
     # for moving topography, append lines of the form :   (<= 1 allowed for now!)
     #   [topotype, fname]
+    dtopo_data.dtopofiles.append([1,'dtopo4.dtt1'])
 
     # == setqinit.data values ==
     rundata.qinit_data.qinit_type = 0
