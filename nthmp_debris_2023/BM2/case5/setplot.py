@@ -122,21 +122,21 @@ def setplot(plotdata=None):
     plotitem.plot_var = geoplot.land
     plotitem.pcolor_cmap = geoplot.land_colors
     plotitem.pcolor_cmin = 0.0
-    plotitem.pcolor_cmax = 2.0
+    plotitem.pcolor_cmax = 0.5
     plotitem.add_colorbar = False
     plotitem.amr_celledges_show = [0,0,0]
 
 
     # Add contour lines of topography:
     plotitem = plotaxes.new_plotitem(plot_type='2d_contour')
-    plotitem.show = False
+    #plotitem.show = False
     plotitem.plot_var = geoplot.topo
     from numpy import arange, linspace
-    plotitem.contour_levels = arange(-75,75,10)
+    plotitem.contour_levels = arange(0.0251,0.2,0.01)
     #plotitem.contour_nlevels = 10
-    plotitem.amr_contour_colors = ['g']  # color on each level
+    plotitem.amr_contour_colors = ['yellow']  # color on each level
     plotitem.kwargs = {'linestyles':'solid'}
-    plotitem.amr_contour_show = [1,1,1]  # show contours only on finest level
+    plotitem.amr_contour_show = [0,0,1]  # show contours only on finest level
     plotitem.celledges_show = 0
     plotitem.patchedges_show = 0
 

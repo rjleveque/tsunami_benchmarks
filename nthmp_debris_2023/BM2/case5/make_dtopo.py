@@ -19,16 +19,18 @@ y = linspace(y1b-1*dd,y2b+1*dd,301)
 
 X,Y = meshgrid(x,y)
 dZb = where(logical_and(logical_and(X>x1b,X<x2b), logical_and(Y>y1b,Y<y2b)),
-            0.051, 0.)
+            1., 0.)
+            #0.051, 0.)
 
 dZ0 = zeros(X.shape)
-times = array([28,29,30,31,32])
+times = array([27,28,29,30,31,32])
 dZ = empty((len(times), len(y), len(x)))
 dZ[0,:,:] = dZ0
 dZ[1,:,:] = dZb
 dZ[2,:,:] = dZb
 dZ[3,:,:] = dZb
-dZ[4,:,:] = dZ0
+dZ[4,:,:] = dZb
+dZ[5,:,:] = dZ0
 
 dtopo.x = x
 dtopo.y = y
@@ -37,6 +39,6 @@ dtopo.Y = Y
 dtopo.dZ = dZ
 dtopo.times = times
 
-fname = 'dtopo.dtt3'
-dtopo.write(fname, dtopo_type=3)
+fname = 'dtopo.dtt1'
+dtopo.write(fname, dtopo_type=1)
 print('Created ',fname)

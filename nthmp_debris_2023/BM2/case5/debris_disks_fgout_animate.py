@@ -29,7 +29,8 @@ else:
     import fgout_tools
     graphics_dir = './'
     
-outdir = os.path.abspath('_output')
+outdir = os.path.abspath('../SWE2d/_output_obst')
+output_format = 'binary32'
 
 if 'mmfs1' in outdir:
     # on hyak:
@@ -37,11 +38,10 @@ if 'mmfs1' in outdir:
 
 print('Looking for output in ',outdir)
 
-output_format = 'binary32'
 
 # List of frames to use for making debris paths and animation:
-#fgframes = range(1,121)
-fgframes = range(1,31)
+fgframes = range(1,121)
+#fgframes = range(1,61)
 #fgframes = range(10,21)
 
 
@@ -65,10 +65,7 @@ x1b2 = 35.29
 x2b2 = x1b2 + 0.4
 y1b2 = 0.2
 y2b2 = y1b2 + 0.4
-    
 
-outdir = '_output'
-format = 'binary32'  # format of fgout grid output
 
 # Instantiate object for reading fgout frames:
 fgout_grid = fgout_tools.FGoutGrid(1, outdir, output_format)
@@ -142,7 +139,7 @@ for xg in xg1:
         ygg.append(yg)
     
 grounding_depth_common = 0. #0.04
-drag_factor_common = 0.05
+drag_factor_common = 0.1
 
 mass_hdpe = 0.5237 # = 987*V, V = 0.102*0.102*0.051 m^3
 mass_wood = 0.3438 # = 648*V
@@ -181,17 +178,19 @@ for k in range(len(xgg)):
     db = array([[t0, xgg[k], ygg[k], u0, v0]])
     debris_paths[dbno] = db
     dbnos.append(dbno)
-    grounding_depth[dbno] = grounding_depth_common
     
-    if mod(k,2)==0:
+    #if mod(k,2)==0:
+    if 0:
         mass[dbno] = mass_hdpe
         hface[dbno] = hface_hdpe
         drag_factor[dbno] = drag_factor_common
+        grounding_depth[dbno] = hface_hdpe
         dbnosA.append(dbno)
     else:
         mass[dbno] = mass_wood
         hface[dbno] = hface_wood
         drag_factor[dbno] = drag_factor_common
+        grounding_depth[dbno] = hface_wood
         dbnosB.append(dbno)
         
     wface[dbno] = wface_common
@@ -568,7 +567,7 @@ xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosA)
 disks1, = ax.plot(xdDisks, ydDisks, color='r', linestyle='-', linewidth=1)
 
 xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosB)
-disks2, = ax.plot(xdDisks, ydDisks, color='yellow', linestyle='-', linewidth=1)
+disks2, = ax.plot(xdDisks, ydDisks, color='yellow', linestyle='-', linewidth=2)
 
 xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosC)
 disks3, = ax.plot(xdDisks, ydDisks, color='k', linestyle='-', linewidth=1)

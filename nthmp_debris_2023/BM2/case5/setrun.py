@@ -115,8 +115,8 @@ def setrun(claw_pkg='geoclaw'):
 
     elif clawdata.output_style == 2:
         # Specify a list of output times.
-        #clawdata.output_times = np.arange(20,61,20)
-        clawdata.output_times = [30,60,90]
+        #clawdata.output_times = np.arange(25,41,0.5)
+        clawdata.output_times = [32,60,90]
 
     elif clawdata.output_style == 3:
         # Output every iout timesteps with a total of ntot time steps:
@@ -222,7 +222,7 @@ def setrun(claw_pkg='geoclaw'):
     #   3 => solid wall for systems where q(2) is normal velocity
 
     clawdata.bc_lower[0] = 'user'
-    clawdata.bc_upper[0] = 'wall'
+    clawdata.bc_upper[0] = 'extrap'
 
     clawdata.bc_lower[1] = 'wall'
     clawdata.bc_upper[1] = 'wall'
@@ -310,7 +310,7 @@ def setrun(claw_pkg='geoclaw'):
     # to specify regions of refinement append lines of the form
     #  [minlevel,maxlevel,t1,t2,x1,x2,y1,y2]
     regions.append([1,1,0,1e9,0,50,-15,15])
-    regions.append([2,3,35,1e9,32,50,-3,6])
+    regions.append([2,3,25,1e9,30,50,-6,6])
 
     # == setgauges.data values ==
     # for gauges append lines of the form  [gaugeno, x, y, t1, t2]
@@ -387,12 +387,14 @@ def setgeo(rundata):
     # for topography, append lines of the form
     #    [topotype, fname]
     topo_data.topofiles.append([2, 'wavetank.tt2'])
+    topo_data.topofiles.append([2, 'wavetank_dtopo_region.tt2'])
     topo_data.topofiles.append([2, 'blocks.tt2'])
 
     # == setdtopo.data values ==
     dtopo_data = rundata.dtopo_data
     # for moving topography, append lines of the form :   (<= 1 allowed for now!)
     #   [topotype, fname]
+    dtopo_data.dtopofiles.append([1,'dtopo.dtt1'])
 
     # == setqinit.data values ==
     rundata.qinit_data.qinit_type = 0

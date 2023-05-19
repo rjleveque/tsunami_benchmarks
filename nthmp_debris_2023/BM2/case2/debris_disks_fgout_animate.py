@@ -29,7 +29,8 @@ else:
     import fgout_tools
     graphics_dir = './'
     
-outdir = os.path.abspath('../SWE2d/_output_no_obst')
+#outdir = os.path.abspath('../SWE2d/_output_no_obst')
+outdir = os.path.abspath('../SWE2d/_output_no_obst_no_dtopo')
 output_format = 'binary32'
 
 if 'mmfs1' in outdir:
@@ -40,8 +41,8 @@ print('Looking for output in ',outdir)
 
 
 # List of frames to use for making debris paths and animation:
-fgframes = range(1,121)
-#fgframes = range(1,91)
+#fgframes = range(1,121)
+fgframes = range(1,31)
 #fgframes = range(10,21)
 
 
@@ -139,7 +140,7 @@ for xg in xg1:
         ygg.append(yg)
     
 grounding_depth_common = 0. #0.04
-drag_factor_common = 0.1
+drag_factor_common = 0.2
 
 mass_hdpe = 0.5237 # = 987*V, V = 0.102*0.102*0.051 m^3
 mass_wood = 0.3438 # = 648*V
@@ -424,8 +425,10 @@ fig,ax = subplots(figsize=(6,7))
 ax.set_xlim(xlimits)
 ax.set_ylim(ylimits)
 
-ax.plot([y1b1,y1b1,y2b1,y2b1,y1b1], [x1b1,x2b1,x2b1,x1b1,x1b1], 'g')
-ax.plot([y1b2,y1b2,y2b2,y2b2,y1b2], [x1b2,x2b2,x2b2,x1b2,x1b2], 'g')
+if 0:
+    # plot obstacles
+    ax.plot([y1b1,y1b1,y2b1,y2b1,y1b1], [x1b1,x2b1,x2b1,x1b1,x1b1], 'g')
+    ax.plot([y1b2,y1b2,y2b2,y2b2,y1b2], [x1b2,x2b2,x2b2,x1b2,x1b2], 'g')
 
 imqoi = 'Depth'
 
