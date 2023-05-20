@@ -576,16 +576,50 @@ def move_debris_substeps(dbnos, debris_paths, fgout1, fgout2, drag_factor=None,
                     
                 # sum up all forces on debris and use to accelerate
                 
-                if h1 < gd:
-                    # grounded, does not move this time step:
-                    xd2 = xd1
-                    yd2 = yd1
-                    ud2 = 0.
-                    vd2 = 0.
-                else:
+                fxd = 0.
+                fyd = 0.
+                
+                if (dradius[dbno] is not None):
+                    # compute inter-particle forces:
+                    for dbnok in dbnos:
+                        if (dbnok != dbno) and (dradius[dbnok] is not None):
+                                           #and (drag_factor[dbnok] is not None):
+                            debris_pathk = debris_paths[dbnok]
+                            tk,xdk,ydk,udk,vdk = debris_pathk[-1,:]
+                            # need to fix for lat-lon:
+                            dist = distfunc(xd1,yd1,xdk,ydk)
+                            diamjk = dradius[dbno] + dradius[dbnok]
+                            try:
+                                Dt,Kt = tether(dbno,dbnok)
+                            except:
+                                Dt,Kt = nan,0.
+
+                            if Kt > 0:
+                                fxd = fxd + Kt*(xd1-xdk)*(Dt-dist)/dist
+                                fyd = fyd + Kt*(yd1-ydk)*(Dt-dist)/dist
+                            elif dist < diamjk:
+                                fxd = fxd + Kspring*(xd1-xdk)*(diamjk-dist)/dist
+                                fyd = fyd + Kspring*(yd1-ydk)*(diamjk-dist)/dist
+                                #print('+++ dbno=%4i, dbnok=%4i, diamjk=%.2f, dist=%.3f, fxd=%g' \
+                                #        % (dbno,dbnok,diamjk,dist,fxd))
+                    # check walls
+                    xwall2 = 43.75
+                    ywall1 = -3.
+                    if xd1 + dradius[dbno] > xwall2:
+                        fxd -= Kspring*(xd1+dradius[dbno] - xwall2)
+                    if yd1 - dradius[dbno] < ywall1:
+                        fxd -= Kspring*(yd1-dradius[dbno] - ywall1)
+                        
+                
+                if (h1 < gd):
+                    # reset velocity so not moving before applying
+                    # inter-particle forces:
+                    ud1 = 0.
+                    vd1 = 0.
+                else:            
                     # drag force on debris:
-                    fxd = df*(u1 - ud1)  
-                    fyd = df*(v1 - vd1)
+                    fxd += df*(u1 - ud1)  
+                    fyd += df*(v1 - vd1)
                     
                     #if wfacedb > 0:
                     if 0:
@@ -594,50 +628,23 @@ def move_debris_substeps(dbnos, debris_paths, fgout1, fgout2, drag_factor=None,
                         hydro_factor = rho_water * wfacedb * min(h1, hfacedb)
                         fxd += hydro_factor * (u1 - ud1)**2
                         fyd += hydro_factor * (v1 - vd1)**2
-                    
-                    
-                    if (dradius[dbno] is not None):
-                        # compute inter-particle forces:
-                        for dbnok in dbnos:
-                            if (dbnok != dbno) and (dradius[dbnok] is not None):
-                                               #and (drag_factor[dbnok] is not None):
-                                debris_pathk = debris_paths[dbnok]
-                                tk,xdk,ydk,udk,vdk = debris_pathk[-1,:]
-                                # need to fix for lat-lon:
-                                dist = distfunc(xd1,yd1,xdk,ydk)
-                                diamjk = dradius[dbno] + dradius[dbnok]
-                                try:
-                                    Dt,Kt = tether(dbno,dbnok)
-                                except:
-                                    Dt,Kt = nan,0.
+                                                        
+                # acceleration:
+                axd = fxd / massdb
+                ayd = fyd / massdb
+                
+                ud2 = ud1 + dt_substep * axd
+                vd2 = vd1 + dt_substep * ayd
+                
+                #print('+++ dbno = %4i, u1 = %.2f, v1 = %.2f' % (dbno,u1,v1))
+                #print('+++ dbno = %4i, axd = %.2f, ayd = %.2f' % (dbno,axd,ayd))
+                #print('+++ dbno = %4i, ud1 = %.2f, vd1 = %.2f' % (dbno,ud1,vd1))
+                #print('+++ dbno = %4i, ud2 = %.2f, vd2 = %.2f' % (dbno,ud2,vd2))
+                                                            
+                # Take full time step with debris velocities:
+                xd2 = xd1 + dt_substep*0.5*(ud1+ud2)
+                yd2 = yd1 + dt_substep*0.5*(vd1+vd2)
 
-                                if Kt > 0:
-                                    fxd = fxd + Kt*(xd1-xdk)*(Dt-dist)/dist
-                                    fyd = fyd + Kt*(yd1-ydk)*(Dt-dist)/dist
-                                elif dist < diamjk:
-                                    fxd = fxd + Kspring*(xd1-xdk)*(diamjk-dist)/dist
-                                    fyd = fyd + Kspring*(yd1-ydk)*(diamjk-dist)/dist
-                                    #print('+++ dbno=%4i, dbnok=%4i, diamjk=%.2f, dist=%.3f, fxd=%g' \
-                                    #        % (dbno,dbnok,diamjk,dist,fxd))
-                                           
-                    # acceleration:
-                    axd = fxd / massdb
-                    ayd = fyd / massdb
-                    
-                    ud2 = ud1 + dt_substep * axd
-                    vd2 = vd1 + dt_substep * ayd
-                    
-                    #print('+++ dbno = %4i, u1 = %.2f, v1 = %.2f' % (dbno,u1,v1))
-                    #print('+++ dbno = %4i, axd = %.2f, ayd = %.2f' % (dbno,axd,ayd))
-                    #print('+++ dbno = %4i, ud1 = %.2f, vd1 = %.2f' % (dbno,ud1,vd1))
-                    #print('+++ dbno = %4i, ud2 = %.2f, vd2 = %.2f' % (dbno,ud2,vd2))
-                                                                
-                    # Take full time step with debris velocities:
-                    xd2 = xd1 + dt_substep*0.5*(ud1+ud2)
-                    yd2 = yd1 + dt_substep*0.5*(vd1+vd2)
-            
-            if xd2 > 43.7:
-                xd2 = 43.7  ## Right boundary (SPECIAL for wall)
             
             debris_paths[dbno] = vstack((debris_path, array([ts2,xd2,yd2,ud2,vd2])))
         
@@ -677,5 +684,260 @@ def make_debris_paths_substeps(fgout_grid, fgframes, debris_paths, dbnos,
                                             drag_factor, grounding_depth, mass,
                                             wface, hface, 
                                             dradius, Kspring, tether, nsubsteps)
+        fgout1 = fgout2
+    return debris_paths
+
+
+    
+def move_debris_squares_substeps(dbnosA, debris_paths, fgout1, fgout2,
+                 drag_factor=None, grounding_depth=0., mass=1e9, dradius=0.,
+                 Kspring=None, nsubsteps=1):
+    """
+    For each dbno in dbnos: debris_paths[dbno] is a 2D array and it is assumed
+    that the last row has the form [t1, x1, y1, u1, v1] with the location and
+    velocity of this debris particle at time t1, which should equal fgout1.t.
+    
+    Compute the location and velocity of the debris particle at time t2 and 
+    append [t2, x2, y2, u2, v2] to the bottom of the array debris_paths[dbno].
+    
+    Currently implemented using the 2-step explicit Runge-Kutta method:
+    1. Interpolate fgout1.u and fgout1.v to (x1,y1) and move the particle
+    over time dt/2 with this velocity, to obtain (xm,ym).
+    2. Interpolate (u,v) in space and time to this midpoint location, and then
+    use this velocity to move the particle over time dt from (x1,y1) to (x2,y2).
+    """
+
+    from clawpack.geoclaw.util import haversine
+    
+    if coordinate_system == 1:
+        distfunc = lambda x1,y1,x2,y2: sqrt((x1-x2)**2 + (y1-y2)**2)
+
+    elif coordinate_system == 2:
+        distfunc = lambda x1,y1,x2,y2: haversine(x1,x2,y1,y2)
+        
+        
+    t1full = fgout1.t
+    t2full = fgout2.t
+    dt = t2full - t1full
+    
+    dt_substep = dt / nsubsteps
+    
+    print('Moving debris over time dt = %g with %i substeps' % (dt,nsubsteps))
+    print('       from t1 = %s to t2 = %.2f' % (t1full,t2full))
+    
+    h_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'h')
+    u_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'u')
+    v_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'v')
+
+    for ns in range(nsubsteps):
+        ts1 = t1full + ns*dt_substep
+        ts2 = ts1 + dt_substep
+        #print('    substep %i with dt = %.3f starting at ts = %.3f' \
+        #        % (ns,dt_substep,ts1))
+        for dbnoA in dbnosA:
+            
+            try:
+                gd = grounding_depth[dbnoA]  # if different for each particle
+            except:
+                gd = grounding_depth  # assume it's a scalar, same for all debris
+                
+            try:
+                df = drag_factor[dbnoA]  # if different for each particle
+            except:
+                df = drag_factor  # assume it's a scalar, same for all debris
+                
+            try:
+                massdb = mass[dbnoA]
+            except:
+                massdb = mass  # assume it's a scalar, same for all debris
+                
+
+            width = 4*dradius[dbnoA]
+                
+            xd2c = empty(4)
+            yd2c = empty(4)
+            ud2c = empty(4)
+            vd2c = empty(4)
+            xcm1 = 0.
+            ycm1 = 0.
+            #theta1 = empty(4)
+            
+            for corner in range(4):
+                dbno = dbnoA + corner*1000
+                
+                debris_path = debris_paths[dbno]
+                t1,xd1,yd1,ud1,vd1 = debris_path[-1,:]
+                errmsg = '*** For dbno = %i, expected t1 = %.3f to equal ts1 = %.3f, diff = %g' \
+                        % (dbno, t1, ts1, t1-ts1)
+                assert abs(t1-ts1)<1e-12, errmsg
+                
+                xcm1 += xd1
+                ycm1 += yd1
+                
+                if coordinate_system == 2:
+                    # x,y in degrees, u,v in m/s
+                    # convert u,v to degrees/second:
+                    ud1 = ud1 / (Rearth*DEG2RAD * cos(DEG2RAD*yd1))
+                    vd1 = vd1 / (Rearth*DEG2RAD)
+        
+                h1 = h_fcn(xd1,yd1,t1)
+                u1 = u_fcn(xd1,yd1,t1)
+                v1 = v_fcn(xd1,yd1,t1)
+                #if isnan(u1):
+                #    print('+++ dbno=%i, xd1=%.3f, evaluate u1=%.3f' \
+                #            % (dbno,xd1,u1))
+                    
+                # sum up all forces on debris and use to accelerate
+                
+                fxd = 0.
+                fyd = 0.
+                
+                for dbnokA in dbnosA:
+                    if (dbnokA != dbnoA):
+                        print('+++ check dbno = %i, dbnokA = %i' % (dbno,dbnokA))
+                        for cornerk in range(4):
+                            dbnok = dbnokA + cornerk*1000
+                            debris_pathk = debris_paths[dbnok]
+                            tk,xdk,ydk,udk,vdk = debris_pathk[-1,:]
+                            # need to fix for lat-lon:
+                            dist = distfunc(xd1,yd1,xdk,ydk)
+                            diamjk = dradius[dbno] + dradius[dbnok]
+                            
+                            if dist < diamjk:
+                                fxd = fxd + Kspring*(xd1-xdk)*(diamjk-dist)/dist
+                                fyd = fyd + Kspring*(yd1-ydk)*(diamjk-dist)/dist
+                                #print('+++ dbno=%4i, dbnok=%4i, diamjk=%.2f, dist=%.3f, fxd=%g' \
+                                #        % (dbno,dbnok,diamjk,dist,fxd))
+                                
+                # check walls
+                xwall2 = 43.75
+                ywall1 = -3.
+                if xd1 + dradius[dbno] > xwall2:
+                    fxd -= Kspring*(xd1+dradius[dbno] - xwall2)
+                if yd1 - dradius[dbno] < ywall1:
+                    fxd -= Kspring*(yd1-dradius[dbno] - ywall1)
+                        
+                
+                if (h1 < gd):
+                    # reset velocity so not moving before applying
+                    # inter-particle forces:
+                    ud1 = 0.
+                    vd1 = 0.
+                else:            
+                    # drag force on debris:
+                    fxd += df*(u1 - ud1)  
+                    fyd += df*(v1 - vd1)
+                                                        
+                # acceleration:
+                axd = fxd / massdb
+                ayd = fyd / massdb
+                
+                ud2c[corner] = ud1 + dt_substep * axd
+                vd2c[corner] = vd1 + dt_substep * ayd
+                
+                #print('+++ dbno = %4i, u1 = %.2f, v1 = %.2f' % (dbno,u1,v1))
+                #print('+++ dbno = %4i, axd = %.2f, ayd = %.2f' % (dbno,axd,ayd))
+                #print('+++ dbno = %4i, ud1 = %.2f, vd1 = %.2f' % (dbno,ud1,vd1))
+                #print('+++ dbno = %4i, ud2 = %.2f, vd2 = %.2f' % (dbno,ud2,vd2))
+                                                            
+                # Take full time step with debris velocities:
+                xd2c[corner] = xd1 + dt_substep*0.5*(ud1+ud2c[corner])
+                yd2c[corner] = yd1 + dt_substep*0.5*(vd1+vd2c[corner])
+                
+                # done with corner
+            
+            print('+++ xd2c = ', xd2c)
+            print('+++ yd2c = ', yd2c)
+            xcm1 = xcm1/4.
+            ycm1 = ycm1/4.
+            xcm2 = mean(xd2c)
+            ycm2 = mean(yd2c)
+            
+            dxcorner = xd2c - xcm2
+            dycorner = yd2c - ycm2
+            theta = arctan(dycorner/dxcorner)   
+            theta = theta + arange(0,4,1.)*pi/2.
+            #theta = fmod(theta,pi)
+            thetaA = theta[0]
+            theta = theta - thetaA
+            theta = arcsin(sin(theta))
+            print('+++ theta = ',theta)
+            dtheta = mean(theta)
+            #cdtheta = cos(dtheta)
+            #sdtheta = sin(dtheta)
+            print('+++ dtheta = %g' % dtheta)
+            
+            thetaA = thetaA - dtheta
+            theta2 = thetaA - arange(0,4,1.)*pi/2.
+            print('+++ theta2 = ',theta2)
+            
+            rad = sqrt(2)*dradius[dbnoA]
+            print('+++ xcm2,ycm2,rad: ',xcm2,ycm2,rad)
+            
+            for corner in range(4):
+                dbno = dbnoA + corner*1000
+                debris_path = debris_paths[dbno]
+                xd2 = xcm2 + rad*cos(theta2[corner])
+                yd2 = ycm2 + rad*sin(theta2[corner])
+                 
+                # Depth at final time t2:
+                h2 = h_fcn(xd2,yd2,ts2)
+
+                if h2 < grounding_depth[dbno]:
+                    ud2 = 0.
+                    vd2 = 0.    
+                else:
+                    ud2 = ud2c[corner]
+                    vd2 = vd2c[corner]
+
+                debris_paths[dbno] = vstack((debris_path,
+                                            array([ts2,xd2,yd2,ud2,vd2])))
+            #import pdb; pdb.set_trace()
+        
+    return debris_paths
+
+
+            
+def make_debris_paths_substeps2(fgout_grid, fgframes, debris_paths,
+                      dbnosA, dbnosT,
+                      drag_factor=None, grounding_depth=0.,
+                      mass=1e9, dradius=None, 
+                      Kspring=None, nsubsteps=1):
+    """
+    dbnos is a list of debris particle labels (integers) to operate on.
+    debris_paths a dictionary indexed by integer dbno.
+    Each element 
+        debris_path = debris_paths[dbno] 
+    is a 2D numpy array with at least one row and three columns t,x,y.
+    The last row of debris_path defines the starting time and location of 
+    the particle.
+    This routine loops over all fgout frames in fgframes, reads in the frame
+    for fgout grid number fgno as fgout2, 
+    and then calls move_debris to move each particle from time
+    fgout1.t to fgout2.t, where fgout1 is the previous frame.  The new time
+    and location are added as a new row in the debris_path array.
+    """
+    
+    fgout1 = fgout_grid.read_frame(fgframes[0])
+    
+    for fgframe in fgframes[1:]:
+        print('Trying to read fgno=%i, fgframe=%i' % (fgout_grid.fgno,fgframe))
+        try:
+            fgout2 = fgout_grid.read_frame(fgframe)
+        except:
+            print('Could not read file, exiting loop')
+            break
+        debris_paths = move_debris_squares_substeps(dbnosA, debris_paths,
+                                            fgout1, fgout2,
+                                            drag_factor, grounding_depth, mass,
+                                            dradius, Kspring, nsubsteps)
+        
+        if len(dbnosT) > 0:    
+            wface = hface = tether = 0.                        
+            debris_paths = move_debris_substeps(dbnosT, debris_paths, fgout1, fgout2,
+                                            drag_factor, grounding_depth, mass,
+                                            wface, hface, 
+                                            dradius, Kspring, tether, nsubsteps)
+                                                    
         fgout1 = fgout2
     return debris_paths

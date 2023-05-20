@@ -44,7 +44,7 @@ output_format = 'binary32'
 # List of frames to use for making debris paths and animation:
 fgframes = range(10,121)
 #fgframes = range(10,21)
-#fgframes = [30,31]
+#fgframes = [30,31,32]
 
 
 bgimage = None
@@ -105,8 +105,8 @@ grounding_depth = {}
 drag_factor = {}
 mass = {}
 dradius = {}
-Kspring = 200.
-nsubsteps = 40
+Kspring = 300.
+nsubsteps = 10
 
 
 dbnos = []
@@ -118,7 +118,7 @@ dbnosC = []
 u0 = 0.
 v0 = 0.
 
-grounding_depth_common = 0.06
+grounding_depth_common = 0.05
 drag_factor_common = 5.
 mass_common = 14.5
 dradius_common = 0.149
@@ -129,6 +129,7 @@ length = 0.3
 #yg1 = [0.82, 0.12, 0.82]
 #xgg = [35.54]
 #ygg = [1.22]
+
 
 rad = 0.15
 xcentroid = 34.94
@@ -142,29 +143,6 @@ for xg in xg1:
         xgg.append(xg)
         ygg.append(yg)
 
-
-#Ktether = {}
-#Ktether_common = 50.
-
-def tether(dbno1,dbno2):
-    Dtether = nan
-    Ktether = 0.
-    if dbno1<9000 and dbno2<9000 and mod(dbno1-dbno2,1000)==0:
-        # points in same square
-        if max(dbno1,dbno2) < 4000:
-            if abs(dbno1-dbno2) in [1000,3000]:
-                # adjacent corners of square
-                Dtether = length
-                Ktether = 200.
-            else:
-                # diagonal corners of square
-                Dtether = sqrt(2)*length
-                Ktether = 200.
-        else:
-            # center and a corner of same square
-            Dtether = 0.5*sqrt(2)*length
-            Ktether = 100.
-    return Dtether,Ktether
 
 for k in range(len(xgg)):
     dbno = k
@@ -230,19 +208,21 @@ print('Created %i initial debris particles' % len(dbnos))
 
 
 if 1:
+    
     # add particles for square obstacle:
-    xg1 = [x1b+0.15, x1b+0.45]
-    yg1 = [y1b+0.15, y1b+0.45]
-    xgg = []
-    ygg = []
-    for xg in xg1:
-        for yg in yg1:
-            xgg.append(xg)
-            ygg.append(yg)
-
+    xcb1 = x1b + 0.15
+    xcb2 = x1b + 0.45
+    ycb1 = y1b + 0.15
+    ycb2 = y1b + 0.45
+    xgg = [xcb1,xcb1,xcb2,xcb2]
+    ygg = [ycb1,ycb2,ycb2,ycb1]
+    
+    dbno_obst = 99    
+    dbnosA.append(dbno_obst)
+    
     for k in range(len(xgg)):
         db = array([[t0, xgg[k], ygg[k], u0, v0]])
-        dbno = 9000 + k
+        dbno = dbno_obst + k*1000
         debris_paths[dbno] = db
         dbnos.append(dbno)
         dbnosC.append(dbno)
@@ -253,7 +233,9 @@ if 1:
         dradius[dbno] = 0.149
         mass[dbno] = 1e6
 
-if 1:
+dbnosT = []             
+
+if 0:
     # add massless tracer particles:
 
     xgg = []
@@ -263,7 +245,6 @@ if 1:
             xgg.append(xg)
             ygg.append(yg)
             
-    dbnosT = []             
     for k in range(len(xgg)):
         dbno = 5000+k
         db = array([[t0, xgg[k], ygg[k], u0, v0]])
@@ -440,7 +421,7 @@ if imqoi=='Depth':
 
     #bounds_depth = np.array([0,1,2,3,4,5])
     #bounds_depth = np.array([0,0.04,0.08,0.12,0.16,0.20,0.24])
-    bounds_depth = np.array([0.001,0.04,0.08,0.12,0.16])
+    bounds_depth = np.array([0.001,0.04,0.06,0.08,0.10])
 
     norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
     
@@ -538,52 +519,53 @@ fargs = (im,pairs,disks3,dbpoints,title_text)
 # fargs should be initialized above and are the plot Artist objects 
 # whose data change from one frame to the next.
 
+if 1:
 
-def update(num, im, pairs,disks3, dbpoints, title_text):
-    
-    fgframe = fgframes[num]
-    # note: uses fgframes to specify fgout frames to use
-    
-    # Read fgout data for this frame:
-    #fgout = P.read_fgout_frame(fgno, fgframe, plotdata)
-    fgout = fgout_grid.read_frame(fgframe)
-    
-    # Reset the plot objects that need to change from previous frame:
-
-    # title:
-    t = fgout.t        
-    t_str = timeformat(t)
-    title_text.set_text('%s at t = %s' % (imqoi,t_str))
-    
-    # color image:
-    if imqoi == 'Depth':
-        eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
-        im.set_data(flipud(eta_water))
-    else:
-        im.set_data(flipud(fgout.s))
-
-    # particle locations:
-    
-    xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
-    pairs.set_data(ydAB, xdAB)
+    def update(num, im, pairs,disks3, dbpoints, title_text):
         
-    xdT,ydT = make_dbT(t, debris_paths, dbnosT)
-    dbpoints.set_data(ydT,xdT)
-
-    if len(dbnosC) > 0:
-        xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosC)
-        disks3.set_data(ydDisks, xdDisks)
+        fgframe = fgframes[num]
+        # note: uses fgframes to specify fgout frames to use
         
-    # must now return all the objects listed in fargs:
-    return im,pairs,disks3,dbpoints,title_text
+        # Read fgout data for this frame:
+        #fgout = P.read_fgout_frame(fgno, fgframe, plotdata)
+        fgout = fgout_grid.read_frame(fgframe)
+        
+        # Reset the plot objects that need to change from previous frame:
 
-print('Making anim...')
-anim = animation.FuncAnimation(fig, update,
-                               frames=len(fgframes), 
-                               fargs=fargs,
-                               interval=200, blit=True)
+        # title:
+        t = fgout.t        
+        t_str = timeformat(t)
+        title_text.set_text('%s at t = %s' % (imqoi,t_str))
+        
+        # color image:
+        if imqoi == 'Depth':
+            eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
+            im.set_data(flipud(eta_water))
+        else:
+            im.set_data(flipud(fgout.s))
 
-fname_mp4 = 'debris_squares.mp4'
-fps = 5
-print('Making mp4...')
-animation_tools.make_mp4(anim, fname_mp4, fps)
+        # particle locations:
+        
+        xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
+        pairs.set_data(ydAB, xdAB)
+            
+        xdT,ydT = make_dbT(t, debris_paths, dbnosT)
+        dbpoints.set_data(ydT,xdT)
+
+        if len(dbnosC) > 0:
+            xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosC)
+            disks3.set_data(ydDisks, xdDisks)
+            
+        # must now return all the objects listed in fargs:
+        return im,pairs,disks3,dbpoints,title_text
+
+    print('Making anim...')
+    anim = animation.FuncAnimation(fig, update,
+                                   frames=len(fgframes), 
+                                   fargs=fargs,
+                                   interval=200, blit=True)
+
+    fname_mp4 = 'debris_squares.mp4'
+    fps = 5
+    print('Making mp4...')
+    animation_tools.make_mp4(anim, fname_mp4, fps)
