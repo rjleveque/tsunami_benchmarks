@@ -190,7 +190,7 @@ for k in range(len(xgg)):
         mass[dbno] = mass_wood
         hface[dbno] = hface_wood
         drag_factor[dbno] = drag_factor_common
-        grounding_depth[dbno] = hface_wood
+        grounding_depth[dbno] = 0.01 #hface_wood
         dbnosB.append(dbno)
         
     wface[dbno] = wface_common
@@ -263,9 +263,9 @@ if 1:
         dbnos.append(dbno)
         dbnosC.append(dbno)
 
-        grounding_depth[dbno] = 0.
-        drag_factor[dbno] = None
-        mass[dbno] = 1.
+        grounding_depth[dbno] = 100.
+        drag_factor[dbno] = 1.
+        mass[dbno] = 1e6
         wface[dbno] = 0.
         hface[dbno] = 0.
         dradius[dbno] = 0.099
@@ -454,8 +454,8 @@ if imqoi=='Depth':
 
     norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
     
-    #eta_water = where(fgout.h>0, fgout.h, nan)
-    eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
+    fgout_h = P.read_fgout_qoi(fgout, 'h')
+    eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
     
     im = imshow(flipud(eta_water), extent=fgout_extent,
                     #cmap=geoplot.tsunami_colormap)
@@ -479,8 +479,9 @@ if imqoi=='Depth':
 elif imqoi=='Speed':
     # speed
     s_units = 'm/s'
+    fgout_s = P.read_fgout_qoi(fgout, 's')
     if s_units == 'knots':
-        s = fgout.s * 1.9438  # convert m/s to knots
+        s = fgout_s * 1.9438  # convert m/s to knots
         bounds_speed = np.array([1e-3,3,4,6,9,12])  # knots
     else:
         s = fgout.s
@@ -601,10 +602,12 @@ def update(num, im, disks1,disks2,disks3, dbpoints, title_text):
     
     # color image:
     if imqoi == 'Depth':
-        eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
+        fgout_h = P.read_fgout_qoi(fgout, 'h')
+        eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
         im.set_data(flipud(eta_water))
     else:
-        im.set_data(flipud(fgout.s))
+        fgout_s = P.read_fgout_qoi(fgout, 's')
+        im.set_data(flipud(fgout_s))
 
     # particle locations:
     

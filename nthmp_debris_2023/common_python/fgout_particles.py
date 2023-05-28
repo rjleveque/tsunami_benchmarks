@@ -16,6 +16,43 @@ rho_water = 1000.  # kg/m^3
 
 coordinate_system = 1  # need to generalize?
 
+simdata = False  # use sim data provided rather than fgout data?
+
+def read_fgout_qoi(fgout,qoi):
+    
+    x1 = fgout.X[:,0]
+    y1 = fgout.Y[0,:]
+    t = fgout.t
+        
+    if simdata:
+        import pickle
+        with open('../sim_data.pickle','rb') as f:
+            sim_data = pickle.load(f)
+        zeta_fcn = sim_data['zeta_fcn']  # function that interpolates zeta to (t,x)
+        u_vel_fcn = sim_data['u_vel_fcn']  # function that interpolates u_vel to (t,x)
+        tx = vstack((t*ones(x1.shape), x1)).T
+        sim_zeta_1d = zeta_fcn(tx)
+        if qoi == 'h':
+            q1d = maximum(sim_zeta_1d - fgout.B[:,0], 0.)
+        elif qoi == 'u':
+            q1d = u_vel_fcn(tx)
+        elif qoi == 'v':
+            q1d = zeros(x1.shape)
+        elif qoi == 's':
+            q1d = abs(u_vel_fcn(tx))
+        q = outer(q1d, ones(y1.shape))
+        q = where(isnan(q),0,q)
+        #print('*** read %s from sim data' % qoi)
+        
+    else:
+        try:
+            q = getattr(fgout,qoi)
+            #print('*** read %s from fgout' % qoi)
+        except:
+            print('*** fgout missing attribute qoi = %s?' % qoi)
+            
+    return q
+    
 # =============================================
 # Functions for tracking debris
 # =============================================
@@ -43,17 +80,18 @@ def make_fgout_fcn_xy(fgout, qoi, method='nearest',
     
     from scipy.interpolate import RegularGridInterpolator
     
-    try:
-        q = getattr(fgout,qoi)
-    except:
-        print('*** fgout missing attribute qoi = %s?' % qoi)
+    x1 = fgout.X[:,0]
+    y1 = fgout.Y[0,:]
+    t = fgout.t
+    
+    q = read_fgout_qoi(fgout,qoi)
+
         
     err_msg = '*** q must have same shape as fgout.X\n' \
             + 'fgout.X.shape = %s,   q.shape = %s' % (fgout.X.shape,q.shape)
     assert fgout.X.shape == q.shape, err_msg
     
-    x1 = fgout.X[:,0]
-    y1 = fgout.Y[0,:]
+
     fgout_fcn1 = RegularGridInterpolator((x1,y1), q, method=method,
                 bounds_error=bounds_error, fill_value=fill_value)
 
@@ -470,8 +508,6 @@ def plot_debris_pairs(t, debris_paths, dbnosA, dbnosB, ax,
             yB = dbB[j,2]
             ax.plot([xA,xB], [yA,yB], color=color, linewidth=linewidth)
             
-
-    
 def move_debris_substeps(dbnos, debris_paths, fgout1, fgout2, drag_factor=None, 
                  grounding_depth=0., mass=1e9, wface=0., hface=0., dradius=None, 
                  Kspring=None, tether=None, nsubsteps=1):
@@ -650,6 +686,77 @@ def move_debris_substeps(dbnos, debris_paths, fgout1, fgout2, drag_factor=None,
         
     return debris_paths
 
+    
+def move_tracers_substeps(dbnos, debris_paths, fgout1, fgout2, nsubsteps=1):
+    """
+    For each dbno in dbnos: debris_paths[dbno] is a 2D array and it is assumed
+    that the last row has the form [t1, x1, y1, u1, v1] with the location and
+    velocity of this debris particle at time t1, which should equal fgout1.t.
+    
+    Compute the location and velocity of the debris particle at time t2 and 
+    append [t2, x2, y2, u2, v2] to the bottom of the array debris_paths[dbno].
+    """
+    
+    from clawpack.geoclaw.util import haversine
+    
+    if coordinate_system == 1:
+        distfunc = lambda x1,y1,x2,y2: sqrt((x1-x2)**2 + (y1-y2)**2)
+
+    elif coordinate_system == 2:
+        distfunc = lambda x1,y1,x2,y2: haversine(x1,x2,y1,y2)
+        
+        
+    t1full = fgout1.t
+    t2full = fgout2.t
+    dt = t2full - t1full
+    
+    dt_substep = dt / nsubsteps
+    
+    print('Moving debris over time dt = %g with %i substeps' % (dt,nsubsteps))
+    print('       from t1 = %s to t2 = %.2f' % (t1full,t2full))
+    
+    h_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'h')
+    u_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'u')
+    v_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'v')
+
+    for ns in range(nsubsteps):
+        ts1 = t1full + ns*dt_substep
+        ts2 = ts1 + dt_substep
+        #print('    substep %i with dt = %.3f starting at ts = %.3f' \
+        #        % (ns,dt_substep,ts1))
+        for dbno in dbnos:
+            debris_path = debris_paths[dbno]
+            t1,xd1,yd1,ud1,vd1 = debris_path[-1,:]
+            errmsg = '*** For dbno = %i, expected t1 = %.3f to equal ts1 = %.3f, diff = %g' \
+                    % (dbno, t1, ts1, t1-ts1)
+            assert abs(t1-ts1)<1e-12, errmsg
+            
+                
+            if coordinate_system == 2:
+                # x,y in degrees, u,v in m/s
+                # convert u,v to degrees/second:
+                ud1 = ud1 / (Rearth*DEG2RAD * cos(DEG2RAD*yd1))
+                vd1 = vd1 / (Rearth*DEG2RAD)
+                    
+            xd2 = xd1 + dt_substep * ud1
+            yd2 = yd1 + dt_substep * vd1
+            # set debris velocity equal to fluid velocity (tracer particle)
+            u2 = u_fcn(xd2,yd2,ts2)
+            v2 = v_fcn(xd2,yd2,ts2)
+            ud2 = u2
+            vd2 = v2
+            #print('+++ dbno = %4i, Tracer, u2 = %.2f, v2 = %.2f' % (dbno,u2,v2))
+            
+            # Take full time step with debris velocities:
+            xd2 = xd1 + dt_substep*0.5*(ud1+ud2)
+            yd2 = yd1 + dt_substep*0.5*(vd1+vd2)
+            
+            xd2 = minimum(xd2, 43.7)
+
+            debris_paths[dbno] = vstack((debris_path, array([ts2,xd2,yd2,ud2,vd2])))
+        
+    return debris_paths
+
 
             
 def make_debris_paths_substeps(fgout_grid, fgframes, debris_paths, dbnos,
@@ -725,9 +832,9 @@ def move_debris_squares_substeps(dbnosA, debris_paths, fgout1, fgout2,
     print('Moving debris over time dt = %g with %i substeps' % (dt,nsubsteps))
     print('       from t1 = %s to t2 = %.2f' % (t1full,t2full))
     
-    h_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'h')
-    u_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'u')
-    v_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'v')
+    h_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'h', fill_value=0.)
+    u_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'u', fill_value=0.)
+    v_fcn = make_fgout_fcn_xyt(fgout1, fgout2, 'v', fill_value=0.)
 
     for ns in range(nsubsteps):
         ts1 = t1full + ns*dt_substep
@@ -794,7 +901,7 @@ def move_debris_squares_substeps(dbnosA, debris_paths, fgout1, fgout2,
                 
                 for dbnokA in dbnosA:
                     if (dbnokA != dbnoA):
-                        print('+++ check dbno = %i, dbnokA = %i' % (dbno,dbnokA))
+                        #print('+++ check dbno = %i, dbnokA = %i' % (dbno,dbnokA))
                         for cornerk in range(4):
                             dbnok = dbnokA + cornerk*1000
                             debris_pathk = debris_paths[dbnok]
@@ -813,6 +920,7 @@ def move_debris_squares_substeps(dbnosA, debris_paths, fgout1, fgout2,
                 xwall2 = 43.75
                 ywall1 = -3.
                 if xd1 + dradius[dbno] > xwall2:
+                    print('+++ dbno %s passing xwall2' % dbno)                    
                     fxd -= Kspring*(xd1+dradius[dbno] - xwall2)
                 if yd1 - dradius[dbno] < ywall1:
                     fxd -= Kspring*(yd1-dradius[dbno] - ywall1)
@@ -846,8 +954,8 @@ def move_debris_squares_substeps(dbnosA, debris_paths, fgout1, fgout2,
                 
                 # done with corner
             
-            print('+++ xd2c = ', xd2c)
-            print('+++ yd2c = ', yd2c)
+            #print('+++ xd2c = ', xd2c)
+            #print('+++ yd2c = ', yd2c)
             xcm1 = xcm1/4.
             ycm1 = ycm1/4.
             xcm2 = mean(xd2c)
@@ -861,18 +969,18 @@ def move_debris_squares_substeps(dbnosA, debris_paths, fgout1, fgout2,
             thetaA = theta[0]
             theta = theta - thetaA
             theta = arcsin(sin(theta))
-            print('+++ theta = ',theta)
+            #print('+++ theta = ',theta)
             dtheta = mean(theta)
             #cdtheta = cos(dtheta)
             #sdtheta = sin(dtheta)
-            print('+++ dtheta = %g' % dtheta)
+            #print('+++ dtheta = %g' % dtheta)
             
             thetaA = thetaA - dtheta
             theta2 = thetaA - arange(0,4,1.)*pi/2.
-            print('+++ theta2 = ',theta2)
+            #print('+++ theta2 = ',theta2)
             
             rad = sqrt(2)*dradius[dbnoA]
-            print('+++ xcm2,ycm2,rad: ',xcm2,ycm2,rad)
+            #print('+++ xcm2,ycm2,rad: ',xcm2,ycm2,rad)
             
             for corner in range(4):
                 dbno = dbnoA + corner*1000
@@ -934,10 +1042,8 @@ def make_debris_paths_substeps2(fgout_grid, fgframes, debris_paths,
         
         if len(dbnosT) > 0:    
             wface = hface = tether = 0.                        
-            debris_paths = move_debris_substeps(dbnosT, debris_paths, fgout1, fgout2,
-                                            drag_factor, grounding_depth, mass,
-                                            wface, hface, 
-                                            dradius, Kspring, tether, nsubsteps)
+            debris_paths = move_tracers_substeps(dbnosT, debris_paths,
+                                                 fgout1, fgout2, nsubsteps)
                                                     
         fgout1 = fgout2
     return debris_paths
