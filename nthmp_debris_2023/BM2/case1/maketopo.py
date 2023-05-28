@@ -26,7 +26,7 @@ def maketopo_blocks():
     Z = where(logical_and(logical_and(X>=x1b1, X<=x2b1),
                           logical_and(Y>=y1b1, Y<=y2b1)),  
                           1+B0+zb, 1+B0)
-
+    
     Z = where(logical_and(logical_and(X>=x1b2, X<=x2b2),
                           logical_and(Y>=y1b2, Y<=y2b2)),  
                           1+B0+zb, Z)
@@ -42,33 +42,12 @@ def maketopo_pwlinear():
     Output topography file for the entire domain
     """
     nxpoints = 501
-    nypoints = 51
+    nypoints = 5
     xlower = 0.e0
     xupper = 41.29
-    ylower = -5.e0
-    yupper = 5.e0
+    ylower = -20.e0
+    yupper = 20.e0
     outfile= "wavetank.tt2"     
-    topotools.topo2writer(outfile,topo_pwlinear,xlower,xupper,ylower,yupper,nxpoints,nypoints)
-
-def maketopo_dtopo():
-    """
-    Output topography file for region covered by dtopo file
-    """
-
-    dd = 0.153 # distance between centers
-
-    x1b = 31.29
-    x2b = x1b + 4*dd
-    y1b = -2*dd
-    y2b = 2*dd
-
-    nxpoints = 401
-    nypoints = 301
-    xlower = x1b-2*dd
-    xupper = x2b+2*dd
-    ylower = y1b-1*dd
-    yupper = y2b+1*dd
-    outfile= "wavetank_dtopo_region.tt2"     
     topotools.topo2writer(outfile,topo_pwlinear,xlower,xupper,ylower,yupper,nxpoints,nypoints)
 
 def topo_pwlinear(x,y):
@@ -84,6 +63,5 @@ def topo_pwlinear(x,y):
 
 
 if __name__=='__main__':
-    maketopo_blocks()
+    #maketopo_blocks()
     maketopo_pwlinear()
-    maketopo_dtopo()

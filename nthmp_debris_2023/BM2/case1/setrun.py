@@ -55,16 +55,16 @@ def setrun(claw_pkg='geoclaw'):
     clawdata.num_dim = num_dim
 
     # Lower and upper edge of computational domain:
-    clawdata.lower[0] = 0.29
-    clawdata.upper[0] = 41.29
+    clawdata.lower[0] = 0.75
+    clawdata.upper[0] = 43.75
 
-    clawdata.lower[1] = -5.
-    clawdata.upper[1] = 5.
+    clawdata.lower[1] = -13.25
+    clawdata.upper[1] = 13.25
 
 
     # Number of grid cells: Coarsest grid
-    clawdata.num_cells[0] = 82
-    clawdata.num_cells[1] = 20
+    clawdata.num_cells[0] = 86
+    clawdata.num_cells[1] = 53
 
 
     # ---------------
@@ -110,13 +110,12 @@ def setrun(claw_pkg='geoclaw'):
     if clawdata.output_style==1:
         # Output nout frames at equally spaced times up to tfinal:
         clawdata.num_output_times = 20
-        clawdata.tfinal = 60.0
+        clawdata.tfinal = 40.0
         clawdata.output_t0 = True  # output at initial (or restart) time?
 
     elif clawdata.output_style == 2:
         # Specify a list of output times.
-        #clawdata.output_times = np.arange(25,41,0.5)
-        clawdata.output_times = [32,60,90]
+        clawdata.output_times = np.arange(20,61,20)
 
     elif clawdata.output_style == 3:
         # Output every iout timesteps with a total of ntot time steps:
@@ -222,7 +221,7 @@ def setrun(claw_pkg='geoclaw'):
     #   3 => solid wall for systems where q(2) is normal velocity
 
     clawdata.bc_lower[0] = 'user'
-    clawdata.bc_upper[0] = 'extrap'
+    clawdata.bc_upper[0] = 'wall'
 
     clawdata.bc_lower[1] = 'wall'
     clawdata.bc_upper[1] = 'wall'
@@ -310,7 +309,7 @@ def setrun(claw_pkg='geoclaw'):
     # to specify regions of refinement append lines of the form
     #  [minlevel,maxlevel,t1,t2,x1,x2,y1,y2]
     regions.append([1,1,0,1e9,0,50,-15,15])
-    regions.append([2,3,25,1e9,30,50,-6,6])
+    regions.append([2,3,35,1e9,32,50,-3,6])
 
     # == setgauges.data values ==
     # for gauges append lines of the form  [gaugeno, x, y, t1, t2]
@@ -387,14 +386,12 @@ def setgeo(rundata):
     # for topography, append lines of the form
     #    [topotype, fname]
     topo_data.topofiles.append([2, 'wavetank.tt2'])
-    topo_data.topofiles.append([2, 'wavetank_dtopo_region.tt2'])
-    topo_data.topofiles.append([2, 'blocks.tt2'])
+    topo_data.topofiles.append([2, 'block.tt2'])
 
     # == setdtopo.data values ==
     dtopo_data = rundata.dtopo_data
     # for moving topography, append lines of the form :   (<= 1 allowed for now!)
     #   [topotype, fname]
-    dtopo_data.dtopofiles.append([1,'dtopo.dtt1'])
 
     # == setqinit.data values ==
     rundata.qinit_data.qinit_type = 0
@@ -413,34 +410,32 @@ def setgeo(rundata):
         fgout.fgno = 1
         fgout.point_style = 2       # will specify a 2d grid of points
         fgout.output_format = 'binary32'  # 4-byte, float32
-        fgout.nx = 110
+        fgout.nx = 400
         fgout.ny = 60
-        fgout.x1 = 30.29  # specify edges (fgout pts will be cell centers)
-        fgout.x2 = 41.29
+        fgout.x1 = 33.75  # specify edges (fgout pts will be cell centers)
+        fgout.x2 = 43.75
         fgout.y1 = -3.
         fgout.y2 = 3.
-        fgout.tstart = 30.
-        fgout.tend = 90.
-        fgout.nout = 121
-        fgout_grids.append(fgout)    # written to fgout_grids.data
-
-
-    if 0:
-        # need to fix y for BM2
-        fgout = fgout_tools.FGoutGrid()
-        fgout.fgno = 2
-        fgout.point_style = 2       # will specify a 2d grid of points
-        fgout.output_format = 'binary32'  # 4-byte, float32
-        fgout.nx = 820
-        fgout.ny = 2  # with cell centers y = -5 and 1.62
-        fgout.x1 = 0.29  # specify edges (fgout pts will be cell centers)
-        fgout.x2 = 41.29
-        fgout.y1 = -8.31
-        fgout.y2 = 4.93
-        fgout.tstart = 0.
+        fgout.tstart = 32.
         fgout.tend = 60.
-        fgout.nout = 120
+        fgout.nout = 141
         fgout_grids.append(fgout)    # written to fgout_grids.data
+
+
+    fgout = fgout_tools.FGoutGrid()
+    fgout.fgno = 2
+    fgout.point_style = 2       # will specify a 2d grid of points
+    fgout.output_format = 'binary32'  # 4-byte, float32
+    fgout.nx = 860
+    fgout.ny = 2  # with cell centers y = -5 and 1.62
+    fgout.x1 = 0.75  # specify edges (fgout pts will be cell centers)
+    fgout.x2 = 43.75
+    fgout.y1 = -8.31
+    fgout.y2 = 4.93
+    fgout.tstart = 0.
+    fgout.tend = 60.
+    fgout.nout = 120
+    fgout_grids.append(fgout)    # written to fgout_grids.data
     
     
     return rundata
