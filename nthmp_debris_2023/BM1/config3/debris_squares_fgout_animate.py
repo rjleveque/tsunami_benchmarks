@@ -28,7 +28,10 @@ else:
     import fgout_tools
     graphics_dir = './'
     
-outdir = os.path.abspath('_output')
+
+#outdir = '../SWE2d/_output_2023-05-05'
+outdir = '../SWE2d/_output_dtopo4_noblock'
+format = 'binary32'  # format of fgout grid output
 
 if 'mmfs1' in outdir:
     # on hyak:
@@ -40,8 +43,8 @@ output_format = 'binary32'
 
 # List of frames to use for making debris paths and animation:
 fgframes = range(10,121)
-#fgframes = range(10,61)
-fgframes = [30,31]
+#fgframes = range(10,41)
+#fgframes = [30,31,32]
 
 
 bgimage = None
@@ -51,7 +54,7 @@ ylimits = [43.75, 34]
 #flipud = lambda A: fliplr(flipud(A))  # x is vertical in plots
 flipud = lambda A: A
 
-color = 'r'
+color = 'k'
 linewidth = 1
 
 # stationary block:
@@ -60,8 +63,6 @@ x2b = 36.14
 y1b = 1.22
 y2b = y1b + 0.6
 
-outdir = '../SWE2d/_output_2023-05-05'
-format = 'binary32'  # format of fgout grid output
 
 # Instantiate object for reading fgout frames:
 fgout_grid = fgout_tools.FGoutGrid(1, outdir, output_format)
@@ -104,8 +105,8 @@ grounding_depth = {}
 drag_factor = {}
 mass = {}
 dradius = {}
-Kspring = 300.
-nsubsteps = 40
+Kspring = 500.
+nsubsteps = 20
 
 
 dbnos = []
@@ -117,9 +118,9 @@ dbnosC = []
 u0 = 0.
 v0 = 0.
 
-grounding_depth_common = 0.04
-drag_factor_common = 1.
-mass_common = 10.
+grounding_depth_common = 0.06
+drag_factor_common = 3.
+mass_common = 14.5
 dradius_common = 0.149
 length = 0.3
 #length = 0.6 # * sqrt(2)
@@ -128,6 +129,7 @@ length = 0.3
 #yg1 = [0.82, 0.12, 0.82]
 #xgg = [35.54]
 #ygg = [1.22]
+
 
 rad = 0.15
 xcentroid = 34.94
@@ -140,37 +142,7 @@ for xg in xg1:
     for yg in yg1:
         xgg.append(xg)
         ygg.append(yg)
-    
-grounding_depth_common = 0.04
-drag_factor_common = 1.
-mass_common = 10.
-dradius_common = 0.149
-length = 0.3
-#length = 0.6 # * sqrt(2)
 
-
-#Ktether = {}
-#Ktether_common = 50.
-
-def tether(dbno1,dbno2):
-    Dtether = nan
-    Ktether = 0.
-    if dbno1<9000 and dbno2<9000 and mod(dbno1-dbno2,1000)==0:
-        # points in same square
-        if max(dbno1,dbno2) < 4000:
-            if abs(dbno1-dbno2) in [1000,3000]:
-                # adjacent corners of square
-                Dtether = length
-                Ktether = 300.
-            else:
-                # diagonal corners of square
-                Dtether = sqrt(2)*length
-                Ktether = 300.
-        else:
-            # center and a corner of same square
-            Dtether = 0.5*sqrt(2)*length
-            Ktether = 100.
-    return Dtether,Ktether
 
 for k in range(len(xgg)):
     dbno = k
@@ -235,20 +207,22 @@ print('Created %i initial debris particles' % len(dbnos))
 #import pdb; pdb.set_trace()
 
 
-if 1:
+if 0:
+    
     # add particles for square obstacle:
-    xg1 = [x1b+0.15, x1b+0.45]
-    yg1 = [y1b+0.15, y1b+0.45]
-    xgg = []
-    ygg = []
-    for xg in xg1:
-        for yg in yg1:
-            xgg.append(xg)
-            ygg.append(yg)
-
+    xcb1 = x1b + 0.15
+    xcb2 = x1b + 0.45
+    ycb1 = y1b + 0.15
+    ycb2 = y1b + 0.45
+    xgg = [xcb1,xcb1,xcb2,xcb2]
+    ygg = [ycb1,ycb2,ycb2,ycb1]
+    
+    dbno_obst = 99    
+    dbnosA.append(dbno_obst)
+    
     for k in range(len(xgg)):
         db = array([[t0, xgg[k], ygg[k], u0, v0]])
-        dbno = 9000 + k
+        dbno = dbno_obst + k*1000
         debris_paths[dbno] = db
         dbnos.append(dbno)
         dbnosC.append(dbno)
@@ -258,6 +232,8 @@ if 1:
         mass[dbno] = 1.
         dradius[dbno] = 0.149
         mass[dbno] = 1e6
+
+dbnosT = []             
 
 if 1:
     # add massless tracer particles:
@@ -269,7 +245,6 @@ if 1:
             xgg.append(xg)
             ygg.append(yg)
             
-    dbnosT = []             
     for k in range(len(xgg)):
         dbno = 5000+k
         db = array([[t0, xgg[k], ygg[k], u0, v0]])
@@ -289,9 +264,9 @@ if 1:
 
 wface = 0.
 hface = 0.
-debris_paths = P.make_debris_paths_substeps(fgout_grid, fgframes, debris_paths,
-                      dbnos, drag_factor, grounding_depth, 
-                      mass, wface, hface, dradius, Kspring, tether, nsubsteps)
+debris_paths = P.make_debris_paths_substeps2(fgout_grid, fgframes, debris_paths,
+                      dbnosA, dbnosT, drag_factor, grounding_depth, 
+                      mass, dradius, Kspring, nsubsteps)
                       
 def make_dbABCD(t, debris_paths, dbnosA):
     xdAB = []
@@ -419,7 +394,7 @@ fig,ax = subplots(figsize=(6,7))
 ax.set_xlim(xlimits)
 ax.set_ylim(ylimits)
 
-ax.plot([y1b,y1b,y2b,y2b,y1b], [x1b,x2b,x2b,x1b,x1b], 'g')
+#ax.plot([y1b,y1b,y2b,y2b,y1b], [x1b,x2b,x2b,x1b,x1b], 'g')
 
 imqoi = 'Depth'
 
@@ -446,12 +421,12 @@ if imqoi=='Depth':
 
     #bounds_depth = np.array([0,1,2,3,4,5])
     #bounds_depth = np.array([0,0.04,0.08,0.12,0.16,0.20,0.24])
-    bounds_depth = np.array([0.001,0.04,0.08,0.12,0.16])
+    bounds_depth = np.array([0.001,0.04,0.06,0.08,0.10])
 
     norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
     
-    #eta_water = where(fgout.h>0, fgout.h, nan)
-    eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
+    fgout_h = P.read_fgout_qoi(fgout, 'h')
+    eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
     
     im = imshow(flipud(eta_water), extent=fgout_extent,
                     #cmap=geoplot.tsunami_colormap)
@@ -475,11 +450,12 @@ if imqoi=='Depth':
 else:
     # speed
     s_units = 'm/s'
+    fgout_s = P.read_fgout_qoi(fgout, 's')
     if s_units == 'knots':
-        s = fgout.s * 1.9438  # convert m/s to knots
+        s = fgout_s * 1.9438  # convert m/s to knots
         bounds_speed = np.array([1e-3,3,4,6,9,12])  # knots
     else:
-        s = fgout.s
+        s = fgout_s
         bounds_speed = np.array([1e-3,1.5,2,3,4.5,6])  # m/s
         bounds_speed = np.array([1e-3,0.1,0.2,0.3,0.4,0.5])  # m/s
         bounds_speed = np.array([1e-3,0.2,0.4,0.6,1.,1.5])  # m/s
@@ -517,6 +493,43 @@ else:
     t_str = timeformat(t)
     title_text = title('%s at t = %s' % (imqoi,t_str))
 
+
+if 1:
+    # plot center of mass path
+    times = debris_paths[dbno][:,0]
+    xcm = zeros(times.shape)
+    ycm = zeros(times.shape)
+    ndebris = 4
+    for dbno in dbnosA:
+        if dbno > 90:
+            continue
+        xdb = zeros(times.shape)
+        ydb = zeros(times.shape)
+        for corner in range(0,4):
+            dbnoc = dbno + corner*1000
+            xdb += debris_paths[dbnoc][:,1]
+            ydb += debris_paths[dbnoc][:,2]
+        xdb = xdb/4.
+        ydb = ydb/4.
+        xcm += minimum(xdb,43.75)
+        ycm += ydb
+        #import pdb; pdb.set_trace()
+        ax.plot(ydb,xdb,'--',color='g',linewidth=0.5)
+        
+        dbxyt = vstack((times,xdb,ydb)).T
+        fname = 'db%sxyt.txt' % str(dbno).zfill(2)
+        savetxt(fname,dbxyt)
+        print('Created ',fname)
+        
+    xcm = xcm/ndebris
+    ycm = ycm/ndebris
+    ax.plot(ycm,xcm,'-',color='r',linewidth=0.5)
+    
+    cmxyt = vstack((times,xcm,ycm)).T
+    fname = 'cmxyt.txt'
+    savetxt(fname,cmxyt)
+    print('Created ',fname)
+        
 xdT,ydT = make_dbT(t, debris_paths, dbnosT)
 dbpoints, = ax.plot(ydT,xdT,'.',color='b',markersize=4)
 #print('+++ dbpoints xdT=', xdT)
@@ -532,8 +545,10 @@ pairs, = ax.plot(ydAB, xdAB, color=color, linestyle='-', linewidth=linewidth)
 #disks2, = ax.plot(xdDisks, ydDisks, color='yellow', linestyle='-', linewidth=2)
 
 xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosC)
-disks3, = ax.plot(xdDisks, ydDisks, color='k', linestyle='-', linewidth=1)
+disks3, = ax.plot(ydDisks, xdDisks, color='k', linestyle='-', linewidth=1)
 
+
+        
 #print('+++ pairs = ',pairs)
 
 # The function update below should have arguments num (for the frame number)
@@ -544,52 +559,57 @@ fargs = (im,pairs,disks3,dbpoints,title_text)
 # fargs should be initialized above and are the plot Artist objects 
 # whose data change from one frame to the next.
 
+if 1:
 
-def update(num, im, pairs,disks3, dbpoints, title_text):
-    
-    fgframe = fgframes[num]
-    # note: uses fgframes to specify fgout frames to use
-    
-    # Read fgout data for this frame:
-    #fgout = P.read_fgout_frame(fgno, fgframe, plotdata)
-    fgout = fgout_grid.read_frame(fgframe)
-    
-    # Reset the plot objects that need to change from previous frame:
-
-    # title:
-    t = fgout.t        
-    t_str = timeformat(t)
-    title_text.set_text('%s at t = %s' % (imqoi,t_str))
-    
-    # color image:
-    if imqoi == 'Depth':
-        eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
-        im.set_data(flipud(eta_water))
-    else:
-        im.set_data(flipud(fgout.s))
-
-    # particle locations:
-    
-    xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
-    pairs.set_data(ydAB, xdAB)
+    def update(num, im, pairs,disks3, dbpoints, title_text):
         
-    xdT,ydT = make_dbT(t, debris_paths, dbnosT)
-    dbpoints.set_data(ydT,xdT)
-
-    if len(dbnosC) > 0:
-        xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosC)
-        disks3.set_data(ydDisks, xdDisks)
+        fgframe = fgframes[num]
+        # note: uses fgframes to specify fgout frames to use
         
-    # must now return all the objects listed in fargs:
-    return im,pairs,disks3,dbpoints,title_text
+        # Read fgout data for this frame:
+        #fgout = P.read_fgout_frame(fgno, fgframe, plotdata)
+        fgout = fgout_grid.read_frame(fgframe)
+        
+        # Reset the plot objects that need to change from previous frame:
 
-print('Making anim...')
-anim = animation.FuncAnimation(fig, update,
-                               frames=len(fgframes), 
-                               fargs=fargs,
-                               interval=200, blit=True)
+        # title:
+        t = fgout.t        
+        t_str = timeformat(t)
+        title_text.set_text('%s at t = %s' % (imqoi,t_str))
+        
+        # color image:
+        if imqoi == 'Depth':
+            fgout_h = P.read_fgout_qoi(fgout, 'h')
+            eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
+            im.set_data(flipud(eta_water))
+        else:
+            fgout_s = P.read_fgout_qoi(fgout, 's')
+            im.set_data(flipud(fgout_s))
 
-fname_mp4 = 'debris_squares.mp4'
-fps = 5
-print('Making mp4...')
-animation_tools.make_mp4(anim, fname_mp4, fps)
+        # particle locations:
+        
+        xdAB,ydAB = make_dbABCD(t, debris_paths, dbnosA)
+        pairs.set_data(ydAB, xdAB)
+            
+        xdT,ydT = make_dbT(t, debris_paths, dbnosT)
+        dbpoints.set_data(ydT,xdT)
+
+        if len(dbnosC) > 0:
+            xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosC)
+            disks3.set_data(ydDisks, xdDisks)
+            
+        # must now return all the objects listed in fargs:
+        return im,pairs,disks3,dbpoints,title_text
+
+    print('Making anim...')
+    anim = animation.FuncAnimation(fig, update,
+                                   frames=len(fgframes), 
+                                   fargs=fargs,
+                                   interval=200, blit=True)
+
+    fname_mp4 = 'debris_squares.mp4'
+    fps = 5
+    print('Making mp4...')
+    animation_tools.make_mp4(anim, fname_mp4, fps)
+
+    

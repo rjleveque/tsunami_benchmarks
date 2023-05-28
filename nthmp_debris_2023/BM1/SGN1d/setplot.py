@@ -50,10 +50,14 @@ def setplot(plotdata):
         #import pdb; pdb.set_trace()
 
     def fixticks(current_data):
-        from pylab import ticklabel_format, plot,grid,gca
+        from pylab import ticklabel_format, plot,grid,gca, where
         ticklabel_format(useOffset=False)
         if xmax is not None:
             plot(xmax, etamax, 'r')
+        iSWE = where(current_data.aux[0,:] > -0.02)[0].min()
+        xSWE = mapc2p1(current_data.x[iSWE])
+        print('xSWE = %.3f' % xSWE)
+        plot([xSWE,xSWE],[-0.6,0.6],'k--')
         grid(True)
         
 

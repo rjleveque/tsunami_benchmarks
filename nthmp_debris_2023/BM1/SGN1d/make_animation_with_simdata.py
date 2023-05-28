@@ -183,7 +183,7 @@ if __name__ == '__main__':
     anim = make_anim()
     
     # Output files:
-    name = 'SGN_animation'
+    name = 'SGN_simdata_animation'
 
     fname_mp4 = name + '.mp4'
 

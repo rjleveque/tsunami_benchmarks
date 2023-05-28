@@ -29,7 +29,7 @@ else:
     graphics_dir = './'
     
 
-outdir = '../SWE2d/_output_2023-05-05'
+#outdir = '../SWE2d/_output_2023-05-05'
 outdir = '../SWE2d/_output'
 format = 'binary32'  # format of fgout grid output
 
@@ -43,7 +43,7 @@ output_format = 'binary32'
 
 # List of frames to use for making debris paths and animation:
 fgframes = range(10,121)
-#fgframes = range(10,21)
+#fgframes = range(10,41)
 #fgframes = [30,31,32]
 
 
@@ -54,7 +54,7 @@ ylimits = [43.75, 34]
 #flipud = lambda A: fliplr(flipud(A))  # x is vertical in plots
 flipud = lambda A: A
 
-color = 'r'
+color = 'k'
 linewidth = 1
 
 # stationary block:
@@ -105,8 +105,8 @@ grounding_depth = {}
 drag_factor = {}
 mass = {}
 dradius = {}
-Kspring = 300.
-nsubsteps = 10
+Kspring = 500.
+nsubsteps = 20
 
 
 dbnos = []
@@ -118,8 +118,8 @@ dbnosC = []
 u0 = 0.
 v0 = 0.
 
-grounding_depth_common = 0.05
-drag_factor_common = 5.
+grounding_depth_common = 0.04
+drag_factor_common = 3.
 mass_common = 14.5
 dradius_common = 0.149
 length = 0.3
@@ -235,7 +235,7 @@ if 1:
 
 dbnosT = []             
 
-if 0:
+if 1:
     # add massless tracer particles:
 
     xgg = []
@@ -425,8 +425,8 @@ if imqoi=='Depth':
 
     norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
     
-    #eta_water = where(fgout.h>0, fgout.h, nan)
-    eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
+    fgout_h = P.read_fgout_qoi(fgout, 'h')
+    eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
     
     im = imshow(flipud(eta_water), extent=fgout_extent,
                     #cmap=geoplot.tsunami_colormap)
@@ -450,11 +450,12 @@ if imqoi=='Depth':
 else:
     # speed
     s_units = 'm/s'
+    fgout_s = P.read_fgout_qoi(fgout, 's')
     if s_units == 'knots':
-        s = fgout.s * 1.9438  # convert m/s to knots
+        s = fgout_s * 1.9438  # convert m/s to knots
         bounds_speed = np.array([1e-3,3,4,6,9,12])  # knots
     else:
-        s = fgout.s
+        s = fgout_s
         bounds_speed = np.array([1e-3,1.5,2,3,4.5,6])  # m/s
         bounds_speed = np.array([1e-3,0.1,0.2,0.3,0.4,0.5])  # m/s
         bounds_speed = np.array([1e-3,0.2,0.4,0.6,1.,1.5])  # m/s
@@ -492,6 +493,43 @@ else:
     t_str = timeformat(t)
     title_text = title('%s at t = %s' % (imqoi,t_str))
 
+
+if 1:
+    # plot center of mass path
+    times = debris_paths[dbno][:,0]
+    xcm = zeros(times.shape)
+    ycm = zeros(times.shape)
+    ndebris = 4
+    for dbno in dbnosA:
+        if dbno > 90:
+            continue
+        xdb = zeros(times.shape)
+        ydb = zeros(times.shape)
+        for corner in range(0,4):
+            dbnoc = dbno + corner*1000
+            xdb += debris_paths[dbnoc][:,1]
+            ydb += debris_paths[dbnoc][:,2]
+        xdb = xdb/4.
+        ydb = ydb/4.
+        xcm += minimum(xdb,43.75)
+        ycm += ydb
+        #import pdb; pdb.set_trace()
+        ax.plot(ydb,xdb,'--',color='g',linewidth=0.5)
+        
+        dbxyt = vstack((times,xdb,ydb)).T
+        fname = 'db%sxyt.txt' % str(dbno).zfill(2)
+        savetxt(fname,dbxyt)
+        print('Created ',fname)
+        
+    xcm = xcm/ndebris
+    ycm = ycm/ndebris
+    ax.plot(ycm,xcm,'-',color='r',linewidth=0.5)
+    
+    cmxyt = vstack((times,xcm,ycm)).T
+    fname = 'cmxyt.txt'
+    savetxt(fname,cmxyt)
+    print('Created ',fname)
+        
 xdT,ydT = make_dbT(t, debris_paths, dbnosT)
 dbpoints, = ax.plot(ydT,xdT,'.',color='b',markersize=4)
 #print('+++ dbpoints xdT=', xdT)
@@ -507,8 +545,10 @@ pairs, = ax.plot(ydAB, xdAB, color=color, linestyle='-', linewidth=linewidth)
 #disks2, = ax.plot(xdDisks, ydDisks, color='yellow', linestyle='-', linewidth=2)
 
 xdDisks,ydDisks = make_dbDisks(t, debris_paths, dbnosC)
-disks3, = ax.plot(xdDisks, ydDisks, color='k', linestyle='-', linewidth=1)
+disks3, = ax.plot(ydDisks, xdDisks, color='k', linestyle='-', linewidth=1)
 
+
+        
 #print('+++ pairs = ',pairs)
 
 # The function update below should have arguments num (for the frame number)
@@ -539,10 +579,12 @@ if 1:
         
         # color image:
         if imqoi == 'Depth':
-            eta_water = np.ma.masked_where(fgout.h < 1e-3, fgout.h)
+            fgout_h = P.read_fgout_qoi(fgout, 'h')
+            eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
             im.set_data(flipud(eta_water))
         else:
-            im.set_data(flipud(fgout.s))
+            fgout_s = P.read_fgout_qoi(fgout, 's')
+            im.set_data(flipud(fgout_s))
 
         # particle locations:
         
@@ -569,3 +611,5 @@ if 1:
     fps = 5
     print('Making mp4...')
     animation_tools.make_mp4(anim, fname_mp4, fps)
+
+    

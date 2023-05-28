@@ -386,13 +386,14 @@ def setgeo(rundata):
     # for topography, append lines of the form
     #    [topotype, fname]
     topo_data.topofiles.append([2, 'wavetank.tt2'])
-    topo_data.topofiles.append([2, 'block.tt2'])
+    #topo_data.topofiles.append([2, 'block.tt2'])
 
     # == setdtopo.data values ==
     dtopo_data = rundata.dtopo_data
     # for moving topography, append lines of the form :   (<= 1 allowed for now!)
     #   [topotype, fname]
-    dtopo_data.dtopofiles.append([1,'dtopo4.dtt1'])
+    #dtopo_data.dtopofiles.append([1,'dtopo1.dtt1'])
+    #dtopo_data.dtopofiles.append([1,'dtopo4.dtt1'])
 
     # == setqinit.data values ==
     rundata.qinit_data.qinit_type = 0

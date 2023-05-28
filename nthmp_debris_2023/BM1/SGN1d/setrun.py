@@ -88,15 +88,15 @@ def setrun(claw_pkg='geoclaw'):
     if 0:
         # Madsen-Sorensen
         rundata.bouss_data.ibouss = 1
-        rundata.bouss_data.B_param = 1./15.
+        #rundata.bouss_data.B_param = 1./15.
     if 1:
         # SGN
         rundata.bouss_data.ibouss = 2
-        rundata.bouss_data.B_param = 1.  # alpha
-        #rundata.bouss_data.B_param = 1.153  # alpha
+        #rundata.bouss_data.B_param = 1.  # alpha
+        rundata.bouss_data.B_param = 1.153  # alpha
 
-    rundata.bouss_data.sw_depth0 = 0.1 #0.02 #0.06  #0.005
-    rundata.bouss_data.sw_depth1 = 0.1 #0.02 #0.06  #0.005
+    rundata.bouss_data.sw_depth0 = 0.02 #0.06  #0.005
+    rundata.bouss_data.sw_depth1 = 0.02 #0.06  #0.005
 
     # ---------------
     # Size of system:
