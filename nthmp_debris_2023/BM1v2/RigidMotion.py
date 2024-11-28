@@ -25,40 +25,8 @@ def make_corners_fcn(L,phi):
         return xc,yc
         
     return corners
-            
 
-L0 = 1.
-L1 = 1.
-L2 = 1.
-phi1 = pi/2
-phi2 = pi/2
-x0 = 0; y0 = 0;
-x1 = 0; y1 = L0;
-x2 = L1; y2 = L0;
-x3 = L1; y3 = 0;
-xc_init = array([x0,x1,x2,x3,x0])
-yc_init = array([y0,y1,y2,y3,y0])
-theta_init = 0.
-z_init = array([x0,y0,theta_init])
-            
-def corners1(z):
-    x0,y0,theta = z # unpack
-    x1 = x0 + L0*sin(theta)
-    y1 = y0 + L0*cos(theta)
-    x2 = x1 + L1*sin(theta + phi1)
-    y2 = y1 + L1*cos(theta + phi1)
-    x3 = x2 + L2*sin(theta + phi1 + phi2)
-    y3 = y2 + L2*cos(theta + phi1 + phi2)
-    xc = array([x0,x1,x2,x3,x0])
-    yc = array([y0,y1,y2,y3,y0])
-    return xc,yc
-    
-L3 = 1
-phi3 = pi/2
-L = array([L0,L1,L2,L3])
-phi = array([0,phi1,phi2,phi3])    
-corners = make_corners_fcn(L,phi)
-    
+
 def F(z, *args, **kwargs):
     
     # target corners xhat,yhat and corners fcn passed in as args:
@@ -75,7 +43,7 @@ def F(z, *args, **kwargs):
         f[2*i] = xc[i] - xhat[i]
         f[2*i+1] = yc[i] - yhat[i]
     return f
-    
+
     
 def remap(xc_hat, yc_hat, z_guess, corners):
     """
@@ -87,12 +55,12 @@ def remap(xc_hat, yc_hat, z_guess, corners):
     xc,yc = corners(result['x'])
     theta = result['x'][2]
     return xc,yc,theta
-    
+
 def velocities_shear():
     u = lambda x,y,t: y
     v = lambda x,y,t: zeros(x.shape)
     return u,v
-    
+
 def make_corner_paths(L,phi,z0,u,v,t0,dt,nsteps):
     """
     make a list of lists, one for each time t0, t0+dt, ... t0 + nsteps*dt
@@ -122,9 +90,14 @@ def make_corner_paths(L,phi,z0,u,v,t0,dt,nsteps):
         corner_paths.append([t_np1, corners_np1])
     
     return corner_paths      
-            
+
         
 def test_corner_paths_square():
+    
+    L = [1,1,1,1]
+    phi = [pi/2, pi/2, pi/2, pi/2]
+    z0 = [0,0.5,0]
+    
     u,v = velocities_shear()
     t0 = 0.
     nsteps = 8
