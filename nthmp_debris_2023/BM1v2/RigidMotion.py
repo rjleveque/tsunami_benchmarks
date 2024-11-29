@@ -78,9 +78,9 @@ def make_corner_paths(L,phi,z0,u,v,t0,dt,nsteps):
         t_n,corners_n = corner_paths[-1] # from previous time step
         t_np1 = t_n + dt
         for k in range(ncorners):
-            xc_n, yc_n, uc_n, vc_n = corners_n[k,:]  # unpack k'th row
-            xc_hat.append(xc_n + dt*uc_n)
-            yc_hat.append(yc_n + dt*vc_n)
+            xk_n, yk_n, uk_n, vk_n = corners_n[k,:]  # unpack k'th row
+            xc_hat.append(xk_n + dt*uk_n)
+            yc_hat.append(yk_n + dt*vk_n)
         # remap to original shape:
         xc_np1, yc_np1, theta_np1 = remap(xc_hat, yc_hat, z_np1, corners)
         z_np1 = (xc_np1[0], yc_np1[0], theta_np1)
@@ -163,26 +163,39 @@ def make_corner_paths_accel(L,phi,z0,u,v,t0,dt,nsteps, params):
         vc_np1 = []
         t_n,corners_n = corner_paths[-1] # from previous time step
         t_np1 = t_n + dt
+        
+        # move corners based on velocities uc_n, vc_n computed at end of last
+        # step, but call these uc_hat, vc_hat since they don't maintain rigid
+        # body constraint yet:
         for k in range(ncorners):
             xk_n, yk_n, uk_n, vk_n = corners_n[k,:]  # unpack k'th row
             xc_hat.append(xk_n + dt*uk_n)
             yc_hat.append(yk_n + dt*vk_n)
 
-        # remap to original shape:
+        # remap to original shape, maintaining rigidity:
         xc_np1, yc_np1, theta_np1 = remap(xc_hat, yc_hat, z_np1, corners)
+        # corresponding z vector for new position:
         z_np1 = (xc_np1[0], yc_np1[0], theta_np1)
     
-        # compute new velocity at n+1:
+        # compute new velocity at n+1 after remapping:
         
         for k in range(ncorners):
-            xk_n, yk_n, uk_n, vk_n = corners_n[k,:]  # if we need uk,vk below
+
             xk_np1 = xc_np1[k]
             yk_np1 = yc_np1[k]
-            # fluid velocities at corner:
+            
+            # need uk_n, vk_n to update using accel, values from previous step:
+            xk_n, yk_n, uk_n, vk_n = corners_n[k,:]
+            # recompute based on actual distance moved, after remapping:
+            uk_n = (xk_np1 - xk_n)/dt
+            vk_n = (yk_np1 - yk_n)/dt
+
+            # fluid velocities at this corner:
             uk_f = u(xk_np1, yk_np1, t_np1)
             vk_f = v(xk_np1, yk_np1, t_np1)
             
             if advect:
+                # to advect with flow, corner velocity = fluid velocity:
                 uk_np1 = uk_f
                 vk_np1 = vk_f
             else:
@@ -198,13 +211,6 @@ def make_corner_paths_accel(L,phi,z0,u,v,t0,dt,nsteps, params):
                 
             uc_np1.append(uk_np1)
             vc_np1.append(vk_np1)
-
-        #uc_np1 = u(xc_np1, yc_np1, t_np1)
-        #vc_np1 = v(xc_np1, yc_np1, t_np1)
-        
-        # try resetting u,v based on actual motion of particles after remap:
-        #uc_np1 = (xc_np1 - xc_n)/dt
-        #vc_np1 = (yc_np1 - yc_n)/dt
         
         corners_np1 = vstack([xc_np1,yc_np1,uc_np1,vc_np1]).T
         corner_paths.append([t_np1, corners_np1])
