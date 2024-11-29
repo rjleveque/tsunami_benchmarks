@@ -41,7 +41,7 @@ def remap(xc_hat, yc_hat, z_guess, corners):
             f[2*i+1] = yc[i] - yc_hat[i]
         return f
     
-    result = least_squares(F,z_guess,args=(xc_hat,yc_hat,corners))
+    result = least_squares(F,z_guess)
     xc,yc = corners(result['x'])
     theta = result['x'][2]
     return xc,yc,theta
@@ -232,7 +232,6 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
         hc_np1 = array([h(x,y,t_np1) for x,y in zip(xc_np1,yc_np1)])
         h_ave = hc_np1.mean()
         
-        
         if h_ave < debris.draft:
             if (abs(corners_n[:,2]).max() + abs(corners_n[:,3]).max()) < 1e-3:
                 # corner velocities at t_n were all zero, check static friction:
@@ -261,6 +260,8 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
         corner_bottom_area = debris.bottom_area / ncorners
         corner_mass = debris.mass / ncorners
         
+        #import pdb; pdb.set_trace()
+        
         for k in range(ncorners):
 
             xk_np1 = xc_np1[k]
@@ -275,6 +276,10 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
             # fluid velocities at this corner:
             uk_f = u(xk_np1, yk_np1, t_np1)
             vk_f = v(xk_np1, yk_np1, t_np1)
+            
+            print('+++ k = %i, uk_f = %.3f  vk_f = %.3f' % (k,uk_f,vk_f))
+            if isnan(uk_f):
+                import pdb; pdb.set_trace()
             
             if debris.advect:
                 if friction is None:
