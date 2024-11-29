@@ -350,7 +350,6 @@ def test_corner_paths_accel():
     #debris.z0 = [3,1,pi/4]
     debris.z0 = [0,0,0]
     #debris.advect = False
-    
     debris.rho = 900.
         
     u,v = velocities_shear()
@@ -393,24 +392,38 @@ if __name__ == '__main__':
     #debris.z0 = [3,1,pi/4]
     debris.z0 = [0,0,0]
     debris.advect = False
-    
     debris.rho = 500.
     print('Draft = %.2fm' % debris.draft)
         
     u,v = velocities_shear()
     #h = lambda x,y,t: max(0., 0.2*(30.-t))  # fluid depth
     h = lambda x,y,t: where(t<300, 0.5*(1 - cos(2*pi*t/15.)), 0.)
-    #h = lambda x,y,t: 0.45
+    #h = lambda x,y,t: 0.55
     
     t0 = 0.
     nsteps = 250
     dt = 0.2
     corner_paths_a = make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps)
     
+    if 1:
+        # Second object:
+        debris2 = DebrisObject()
+        debris2.L = 8 * [0.5]
+        debris2.phi = [pi/2, 0., pi/2, 0., pi/2, 0., pi/2, 0.]
+        debris2.z0 = [0,0,0]
+        debris2.advect = False
+        debris2.rho = 500.
+        corner_paths_2 = make_corner_paths_accel(debris2,h,u,v,t0,dt,nsteps)
+    else:
+        corner_paths_2 = None
+    
     fig = figure(1, figsize=(12,6))
     clf()
     tk,cpk = corner_paths_a[0]
-    plotk, = plot(cpk[:,0],cpk[:,1],'b')
+    plotk_a, = plot(cpk[:,0],cpk[:,1],'b')
+    if corner_paths_2:
+        tk,cpk2 = corner_paths_2[0]
+        plotk_2, = plot(cpk2[:,0],cpk2[:,1],'r')
     h0 = h(0,0,tk)
     title_text = title('time t = %.2fs, h = %.2fm' % (tk,h0))
     axis('scaled')
@@ -419,7 +432,10 @@ if __name__ == '__main__':
     
     def update(k):
         tk,cpk = corner_paths_a[k]
-        plotk.set_data(cpk[:,0],cpk[:,1])
+        plotk_a.set_data(cpk[:,0],cpk[:,1])
+        if corner_paths_2:
+            tk,cpk2 = corner_paths_2[k]
+            plotk_2.set_data(cpk2[:,0],cpk2[:,1])
         h0 = h(0,0,tk)
         title_text.set_text('time t = %.2fs, h = %.2fm' % (tk,h0))
         
