@@ -144,7 +144,6 @@ class DebrisObject():
         self.friction_static = 0.2
         self.friction_kinetic = 0.1
         self.rho_water = 1000. # density of water (g/m^3)
-        self._mass = None # computed from other parameters
         
         self.z0 = [0.,0.,0.]  # location and orientation [x0,y0,theta0]
         
@@ -153,12 +152,15 @@ class DebrisObject():
         self.corner_paths = [] # should be list of [t_n, corners_n] where
                                # corners_n is array with columns [xc,yc,uc,vc]
                                # at each time t_n in self.times
+
     @property
     def mass(self):
-        if self._mass is None:
-            self._mass = self.rho * self.bottom_area * self.height
-        return self._mass
+        return self.rho * self.bottom_area * self.height
         
+    @property
+    def draft(self):
+        return (self.rho / self.rho_water) * self.height
+                
     def get_corners(self, z):    
         """
         convert z = [x0,y0,theta] into a list of corners, assuming (x0,y0) is
@@ -216,38 +218,56 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps):
     
         # compute new velocity at n+1 after remapping:
         
-        for k in range(ncorners):
+        # average fluid depth:
 
-            xk_np1 = xc_np1[k]
-            yk_np1 = yc_np1[k]
+        hc_np1 = array([h(x,y,t_np1) for x,y in zip(xc_np1,yc_np1)])
+        h_ave = hc_np1.mean()
+        
+        if h_ave < debris.draft:
+            print('Grounded at t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
+            uc_np1 = zeros(ncorners)
+            vc_np1 = zeros(ncorners)
+        else:
+            print('At t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
+            wet_face_height = min(h_ave, debris.draft)
+            face_area = debris.face_width * wet_face_height
             
-            # need uk_n, vk_n to update using accel, values from previous step:
-            xk_n, yk_n, uk_n, vk_n = corners_n[k,:]
-            # recompute based on actual distance moved, after remapping:
-            uk_n = (xk_np1 - xk_n)/dt
-            vk_n = (yk_np1 - yk_n)/dt
+            # split up area and mass between corners so each accelerated separately
+            corner_face_area = face_area / ncorners
+            corner_mass = debris.mass / ncorners
+            
+            for k in range(ncorners):
 
-            # fluid velocities at this corner:
-            uk_f = u(xk_np1, yk_np1, t_np1)
-            vk_f = v(xk_np1, yk_np1, t_np1)
-            
-            if debris.advect:
-                # to advect with flow, corner velocity = fluid velocity:
-                uk_np1 = uk_f
-                vk_np1 = vk_f
-            else:
-                du = uk_f - uk_n
-                dv = vk_f - vk_n
-                sk_f = sqrt(du**2 + dv**2)
-                Ffluid_x = 0.5 * debris.rho_water * sk_f * du * face_area
-                Ffluid_y = 0.5 * debris.rho_water * sk_f * dv * face_area
-                #Ffluid_x = 0.
-                #Ffluid_y = 0.
-                uk_np1 = uk_n + dt*Ffluid_x / self.corner_mass
-                vk_np1 = vk_n + dt*Ffluid_y / self.corner_mass
+                xk_np1 = xc_np1[k]
+                yk_np1 = yc_np1[k]
                 
-            uc_np1.append(uk_np1)
-            vc_np1.append(vk_np1)
+                # need uk_n, vk_n to update using accel, values from previous step:
+                xk_n, yk_n, uk_n, vk_n = corners_n[k,:]
+                # recompute based on actual distance moved, after remapping:
+                uk_n = (xk_np1 - xk_n)/dt
+                vk_n = (yk_np1 - yk_n)/dt
+
+                # fluid velocities at this corner:
+                uk_f = u(xk_np1, yk_np1, t_np1)
+                vk_f = v(xk_np1, yk_np1, t_np1)
+                
+                if debris.advect:
+                    # to advect with flow, corner velocity = fluid velocity:
+                    uk_np1 = uk_f
+                    vk_np1 = vk_f
+                else:
+                    du = uk_f - uk_n
+                    dv = vk_f - vk_n
+                    sk_f = sqrt(du**2 + dv**2)
+                    Ffluid_x = 0.5 * debris.rho_water * sk_f * du * corner_face_area
+                    Ffluid_y = 0.5 * debris.rho_water * sk_f * dv * corner_face_area
+                    #Ffluid_x = 0.
+                    #Ffluid_y = 0.
+                    uk_np1 = uk_n + dt*Ffluid_x / corner_mass
+                    vk_np1 = vk_n + dt*Ffluid_y / corner_mass
+                
+                uc_np1.append(uk_np1)
+                vc_np1.append(vk_np1)
         
         corners_np1 = vstack([xc_np1,yc_np1,uc_np1,vc_np1]).T
         corner_paths.append([t_np1, corners_np1])
@@ -266,7 +286,8 @@ def test_corner_paths_accel():
     debris.rho = 500.
         
     u,v = velocities_shear()
-    h = lambda x,y,t: 10.  # fluid depth
+    #h = lambda x,y,t: max(0., 0.2*(30.-t))  # fluid depth
+    h = lambda x,y,t: 0.5*(1 + cos(2*pi*t/15.))
     
     t0 = 0.
     nsteps = 50
@@ -278,10 +299,17 @@ def test_corner_paths_accel():
     for k in range(nsteps):
         tk,cpk = corner_paths[k]
         plot(cpk[:,0],cpk[:,1],'b')
+        if mod(k,5) == 0:
+            text(cpk[:,0].mean(), cpk[:,1].mean()+1, 't = %.1f' % tk,
+                 color='b',fontsize=8)
         # one edge different color to show orientation:
         #plot(cpk[:2,0],cpk[:2,1],'c')
         tk,cpk = corner_paths_a[k]
         plot(cpk[:,0],cpk[:,1],'r')
+        if mod(k,5) == 0:
+            text(cpk[:,0].mean(), cpk[:,1].mean()-1.5, 't = %.1f' % tk,
+                 color='r',fontsize=8)
+
     axis('equal')
     grid(True)
     
