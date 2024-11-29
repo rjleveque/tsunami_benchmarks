@@ -61,17 +61,17 @@ def velocities_shear():
     v = lambda x,y,t: zeros(x.shape)
     return u,v
 
-def make_corner_paths(L,phi,z0,u,v,t0,dt,nsteps):
+def make_corner_paths(debris,u,v,t0,dt,nsteps):
     """
     make a list of lists, one for each time t0, t0+dt, ... t0 + nsteps*dt
     """
     corners = make_corners_fcn(L,phi)
-    xc,yc = corners(z0)
+    xc,yc = debris.get_corners(debris.z0)
     ncorners = len(xc)
     uc = [u(xc[k],yc[k],t0) for k in range(ncorners)]
     vc = [v(xc[k],yc[k],t0) for k in range(ncorners)]
     corner_paths = [[t0, vstack([xc,yc,uc,vc]).T]]
-    z_np1 = z0
+    z_np1 = debris.z0
     for n in range(nsteps):
         xc_hat = []
         yc_hat = []
@@ -138,24 +138,70 @@ def test_corner_paths_triangle():
     return corner_paths
 
 
-def make_corner_paths_accel(L,phi,z0,u,v,t0,dt,nsteps, params):
+# ===============================
+
+class DebrisObject():
+    
+    def __init__(self):
+        
+        self.L = [1.]  # list of edge lengths between corners
+        self.phi = [0.]  # list of turning angles at each corner
+        self.rho = 0.  # density (g/m^3)
+        self.bottom_area = 1.  # area in contact with bottom for friction (m^2)
+        self.face_width = 1.   # cross-section area hit by flow (m)
+        self.height = 1.  # height of object
+        self.advect = True  # passively advected?
+        self.friction_static = 0.2
+        self.friction_kinetic = 0.1
+        self.rho_water = 1000. # density of water (g/m^3)
+        self._mass = None # computed from other parameters
+        
+        self.z0 = [0.,0.,0.]  # location and orientation [x0,y0,theta0]
+        
+        # these can be generated using velocity field from CFD simulation:
+        self.times = []
+        self.corner_paths = [] # should be list of [t_n, corners_n] where
+                               # corners_n is array with columns [xc,yc,uc,vc]
+                               # at each time t_n in self.times
+    @property
+    def mass(self):
+        if self._mass is None:
+            self._mass = self.rho * self.bottom_area * self.height
+        return self._mass
+        
+    def get_corners(self, z):    
+        """
+        convert z = [x0,y0,theta] into a list of corners, assuming (x0,y0) is
+        starting corner and moving at angle theta (up from x-axis) to 2nd corner.
+        Length of first side is L0, then turn through angle phi1, etc.
+        """
+        x0,y0,theta = z # unpack
+        xc = zeros(len(L)+1)
+        yc = zeros(len(L)+1)
+        xc[0] = x0
+        yc[0] = y0
+        phitot = theta
+        for k in range(len(L)):
+            phitot = phitot + phi[k]
+            xc[k+1] = xc[k] + L[k]*cos(phitot)
+            yc[k+1] = yc[k] + L[k]*sin(phitot)
+        return xc,yc
+
+def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps):
     """
     make a list of lists, one for each time t0, t0+dt, ... t0 + nsteps*dt
     """
-    massc = params['massc']
-    rho_w = params['rho_w']
-    A = params['A']
-    advect = params['advect']
     
-    corners = make_corners_fcn(L,phi)
-    xc,yc = corners(z0)
+    # initial corner locations:
+    xc,yc = debris.get_corners(debris.z0)
     ncorners = len(xc)
-    #uc = [u(xc[k],yc[k],t0) for k in range(ncorners)]
-    #vc = [v(xc[k],yc[k],t0) for k in range(ncorners)]
+    
+    # initial velocities:
     uc = zeros(ncorners)
     vc = zeros(ncorners)
+    
     corner_paths = [[t0, vstack([xc,yc,uc,vc]).T]]
-    z_np1 = z0
+    z_np1 = debris.z0
     for n in range(nsteps):
         xc_hat = []
         yc_hat = []
@@ -194,7 +240,7 @@ def make_corner_paths_accel(L,phi,z0,u,v,t0,dt,nsteps, params):
             uk_f = u(xk_np1, yk_np1, t_np1)
             vk_f = v(xk_np1, yk_np1, t_np1)
             
-            if advect:
+            if debris.advect:
                 # to advect with flow, corner velocity = fluid velocity:
                 uk_np1 = uk_f
                 vk_np1 = vk_f
@@ -202,12 +248,12 @@ def make_corner_paths_accel(L,phi,z0,u,v,t0,dt,nsteps, params):
                 du = uk_f - uk_n
                 dv = vk_f - vk_n
                 sk_f = sqrt(du**2 + dv**2)
-                Ffluid_x = 0.5 * rho_w * sk_f * du * A
-                Ffluid_y = 0.5 * rho_w * sk_f * dv * A
+                Ffluid_x = 0.5 * debris.rho_water * sk_f * du * face_area
+                Ffluid_y = 0.5 * debris.rho_water * sk_f * dv * face_area
                 #Ffluid_x = 0.
                 #Ffluid_y = 0.
-                uk_np1 = uk_n + dt*Ffluid_x / massc
-                vk_np1 = vk_n + dt*Ffluid_y / massc
+                uk_np1 = uk_n + dt*Ffluid_x / self.corner_mass
+                vk_np1 = vk_n + dt*Ffluid_y / self.corner_mass
                 
             uc_np1.append(uk_np1)
             vc_np1.append(vk_np1)
@@ -215,22 +261,25 @@ def make_corner_paths_accel(L,phi,z0,u,v,t0,dt,nsteps, params):
         corners_np1 = vstack([xc_np1,yc_np1,uc_np1,vc_np1]).T
         corner_paths.append([t_np1, corners_np1])
     
-    return corner_paths    
+    return corner_paths         
     
 def test_corner_paths_accel():
     L = [1,1,1,1]
     phi = [pi/2, pi/2, pi/2, pi/2]
     z0 = [0,0.5,0]
     
-    params = {'massc': 500., 'rho_w': 1000., 'A': 1., 'advect': False}
-    
+    debris = DebrisObject()
+    debris.rho = 500.
+        
     u,v = velocities_shear()
+    h = lambda x,y,t: 10.  # fluid depth
+    
     t0 = 0.
     nsteps = 20
     dt = 2*pi/nsteps
     z0 = [3,1,pi/4]
-    corner_paths_a = make_corner_paths_accel(L,phi,z0,u,v,t0,dt,nsteps, params)
-    corner_paths = make_corner_paths(L,phi,z0,u,v,t0,dt,nsteps)
+    corner_paths_a = make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps)
+    corner_paths = make_corner_paths(debris,u,v,t0,dt,nsteps)
     
     figure(1);clf();
     for k in range(nsteps):
