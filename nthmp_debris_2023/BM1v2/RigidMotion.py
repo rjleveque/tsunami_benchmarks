@@ -2,7 +2,7 @@
 from pylab import *
 from scipy.optimize import least_squares
 import matplotlib.animation as animation
-
+from clawpack.visclaw import animation_tools, plottools, geoplot
 
 
 def F(z, *args, **kwargs):
@@ -144,6 +144,7 @@ class DebrisObject():
         self.friction_static = 0.2
         self.friction_kinetic = 0.1
         self.rho_water = 1000. # density of water (g/m^3)
+        self.grav = 9.81  # gravitational acceleration
         
         self.z0 = [0.,0.,0.]  # location and orientation [x0,y0,theta0]
         
@@ -180,7 +181,7 @@ class DebrisObject():
             yc[k+1] = yc[k] + self.L[k]*sin(phitot)
         return xc,yc
 
-def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps):
+def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
     """
     make a list of lists, one for each time t0, t0+dt, ... t0 + nsteps*dt
     """
@@ -198,8 +199,10 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps):
     for n in range(nsteps):
         xc_hat = []
         yc_hat = []
-        uc_np1 = []
-        vc_np1 = []
+        #uc_np1 = []
+        #vc_np1 = []
+        uc_np1 = zeros(ncorners)  # may get modified below
+        vc_np1 = zeros(ncorners)
         t_n,corners_n = corner_paths[-1] # from previous time step
         t_np1 = t_n + dt
         
@@ -212,7 +215,8 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps):
             yc_hat.append(yk_n + dt*vk_n)
 
         # remap to original shape, maintaining rigidity:
-        xc_np1, yc_np1, theta_np1 = remap(xc_hat, yc_hat, z_np1, corners)
+        xc_np1, yc_np1, theta_np1 = remap(xc_hat, yc_hat, z_np1, 
+                                          debris.get_corners)
         # corresponding z vector for new position:
         z_np1 = (xc_np1[0], yc_np1[0], theta_np1)
     
@@ -223,51 +227,115 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps):
         hc_np1 = array([h(x,y,t_np1) for x,y in zip(xc_np1,yc_np1)])
         h_ave = hc_np1.mean()
         
+        
         if h_ave < debris.draft:
-            print('Grounded at t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
-            uc_np1 = zeros(ncorners)
-            vc_np1 = zeros(ncorners)
+            if (abs(corners_n[:,2]).max() + abs(corners_n[:,3]).max()) < 1e-3:
+                # corner velocities at t_n were all zero, check static friction:
+                friction = 'static'
+            else:
+                friction = 'kinetic'
+            if verbose:
+                print('%s friction at t = %.2f with h_ave = %.1f' \
+                    % (friction,t_np1,h_ave))
         else:
-            print('At t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
-            wet_face_height = min(h_ave, debris.draft)
-            face_area = debris.face_width * wet_face_height
+            # debris is not touching ground:
+            friction = None
+            if verbose:
+                print('No friction at t = %.2f with h_ave = %.1f' \
+                    % (t_np1,h_ave))
             
-            # split up area and mass between corners so each accelerated separately
-            corner_face_area = face_area / ncorners
-            corner_mass = debris.mass / ncorners
+
+        #print('At t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
+        wet_face_height = min(h_ave, debris.draft)
+        face_area = debris.face_width * wet_face_height
+        
+        # split up area and mass between corners so each can be
+        # accelerated separately
+        corner_face_area = face_area / ncorners
+        corner_bottom_area = debris.bottom_area / ncorners
+        corner_mass = debris.mass / ncorners
+        
+        for k in range(ncorners):
+
+            xk_np1 = xc_np1[k]
+            yk_np1 = yc_np1[k]
             
-            for k in range(ncorners):
+            # need uk_n, vk_n to update using accel, values from previous step:
+            xk_n, yk_n, uk_n, vk_n = corners_n[k,:]
+            # recompute based on actual distance moved, after remapping:
+            uk_n = (xk_np1 - xk_n)/dt
+            vk_n = (yk_np1 - yk_n)/dt
 
-                xk_np1 = xc_np1[k]
-                yk_np1 = yc_np1[k]
-                
-                # need uk_n, vk_n to update using accel, values from previous step:
-                xk_n, yk_n, uk_n, vk_n = corners_n[k,:]
-                # recompute based on actual distance moved, after remapping:
-                uk_n = (xk_np1 - xk_n)/dt
-                vk_n = (yk_np1 - yk_n)/dt
-
-                # fluid velocities at this corner:
-                uk_f = u(xk_np1, yk_np1, t_np1)
-                vk_f = v(xk_np1, yk_np1, t_np1)
-                
-                if debris.advect:
+            # fluid velocities at this corner:
+            uk_f = u(xk_np1, yk_np1, t_np1)
+            vk_f = v(xk_np1, yk_np1, t_np1)
+            
+            if debris.advect:
+                if friction is None:
                     # to advect with flow, corner velocity = fluid velocity:
                     uk_np1 = uk_f
                     vk_np1 = vk_f
                 else:
-                    du = uk_f - uk_n
-                    dv = vk_f - vk_n
-                    sk_f = sqrt(du**2 + dv**2)
-                    Ffluid_x = 0.5 * debris.rho_water * sk_f * du * corner_face_area
-                    Ffluid_y = 0.5 * debris.rho_water * sk_f * dv * corner_face_area
-                    #Ffluid_x = 0.
-                    #Ffluid_y = 0.
-                    uk_np1 = uk_n + dt*Ffluid_x / corner_mass
-                    vk_np1 = vk_n + dt*Ffluid_y / corner_mass
+                    # grounded:
+                    uk_np1 = 0.
+                    vk_np1 = 0.
+            else:
+                # compute forces and acceleration for this corner:
                 
-                uc_np1.append(uk_np1)
-                vc_np1.append(vk_np1)
+                # force Ffluid exerted by fluid based on velocity difference:
+                du = uk_f - uk_n
+                dv = vk_f - vk_n
+                sk_f = sqrt(du**2 + dv**2)
+                Ffluid_x = 0.5 * debris.rho_water * sk_f * du * corner_face_area
+                Ffluid_y = 0.5 * debris.rho_water * sk_f * dv * corner_face_area
+                #Ffluid_x = 0.
+                #Ffluid_y = 0.
+                Ffluid = sqrt(Ffluid_x**2 + Ffluid_y**2)
+                
+                if friction is not None:
+                    Ffriction1 = debris.grav * corner_bottom_area \
+                                * (debris.rho * debris.height - \
+                                   debris.rho_water * h_ave)
+                    if friction == 'static':
+                        Ffriction = debris.friction_static * Ffriction1
+                        Fnet = max(0., Ffluid - Ffriction)
+                        if abs(Ffluid) < 0.01:
+                            Fnet_x = Fnet_y = 0.
+                        else:
+                            Fnet_x = Ffluid_x * Fnet / Ffluid
+                            Fnet_y = Ffluid_y * Fnet / Ffluid
+                    elif friction == 'kinetic':
+                        Ffriction = debris.friction_kinetic * Ffriction1
+                        sk_n = sqrt(uk_n**2 + vk_n**2)
+                        #Fnet_x = Ffluid_x - Ffriction * uk_n / sk_n
+                        #Fnet_y = Ffluid_y - Ffriction * vk_n / sk_n
+                        
+                        Fnet_x = Ffluid_x
+                        Fnet_y = Ffluid_y
+                        
+                    if verbose:
+                        print('k = %i, Ffluid = %.3f, Ffriction = %.3f' \
+                            % (k,Ffluid,Ffriction))
+
+                else:
+                    # not in contact with bottom, only fluid force:
+                    Fnet_x = Ffluid_x
+                    Fnet_y = Ffluid_y
+                    
+                uk_np1 = uk_n + dt*Fnet_x / corner_mass
+                vk_np1 = vk_n + dt*Fnet_y / corner_mass
+                
+                if friction == 'kinetic':
+                     decay = exp(- Ffriction / sk_n  * dt/corner_mass)
+                     uk_np1 *= decay
+                     vk_np1 *= decay
+                
+                if verbose:
+                    print('k = %i, Fnet_x = %.3f, Fnet_y = %.3f' \
+                        % (k,Fnet_x,Fnet_y))
+            
+            uc_np1[k] = uk_np1
+            vc_np1[k] = vk_np1
         
         corners_np1 = vstack([xc_np1,yc_np1,uc_np1,vc_np1]).T
         corner_paths.append([t_np1, corners_np1])
@@ -283,11 +351,12 @@ def test_corner_paths_accel():
     debris.z0 = [0,0,0]
     #debris.advect = False
     
-    debris.rho = 500.
+    debris.rho = 900.
         
     u,v = velocities_shear()
     #h = lambda x,y,t: max(0., 0.2*(30.-t))  # fluid depth
-    h = lambda x,y,t: 0.5*(1 + cos(2*pi*t/15.))
+    h = lambda x,y,t: where(t<30, 0.5*(1 - cos(2*pi*t/15.)), 0.)
+
     
     t0 = 0.
     nsteps = 50
@@ -314,3 +383,53 @@ def test_corner_paths_accel():
     grid(True)
     
     return corner_paths, corner_paths_a
+
+
+if __name__ == '__main__':
+
+    debris = DebrisObject()
+    debris.L = [1,1,1,1]
+    debris.phi = [pi/2, pi/2, pi/2, pi/2]
+    #debris.z0 = [3,1,pi/4]
+    debris.z0 = [0,0,0]
+    debris.advect = False
+    
+    debris.rho = 500.
+    print('Draft = %.2fm' % debris.draft)
+        
+    u,v = velocities_shear()
+    #h = lambda x,y,t: max(0., 0.2*(30.-t))  # fluid depth
+    h = lambda x,y,t: where(t<300, 0.5*(1 - cos(2*pi*t/15.)), 0.)
+    #h = lambda x,y,t: 0.45
+    
+    t0 = 0.
+    nsteps = 250
+    dt = 0.2
+    corner_paths_a = make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps)
+    
+    fig = figure(1, figsize=(12,6))
+    clf()
+    tk,cpk = corner_paths_a[0]
+    plotk, = plot(cpk[:,0],cpk[:,1],'b')
+    h0 = h(0,0,tk)
+    title_text = title('time t = %.2fs, h = %.2fm' % (tk,h0))
+    axis('scaled')
+    axis([-1,30,-2,2])
+    grid(True)
+    
+    def update(k):
+        tk,cpk = corner_paths_a[k]
+        plotk.set_data(cpk[:,0],cpk[:,1])
+        h0 = h(0,0,tk)
+        title_text.set_text('time t = %.2fs, h = %.2fm' % (tk,h0))
+        
+    print('Making anim...')
+    anim = animation.FuncAnimation(fig, update,
+                                   frames=len(corner_paths_a), 
+                                   interval=200, blit=False)
+
+    fname_mp4 = 'corner_paths.mp4'
+    fps = 5
+    print('Making mp4...')
+    animation_tools.make_mp4(anim, fname_mp4, fps)
+    
