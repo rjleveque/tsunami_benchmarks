@@ -60,12 +60,13 @@ def make_corner_paths(debris,u,v,t0,dt,nsteps):
     ncorners = len(xc)
     uc = [u(xc[k],yc[k],t0) for k in range(ncorners)]
     vc = [v(xc[k],yc[k],t0) for k in range(ncorners)]
-    corner_paths = [[t0, vstack([xc,yc,uc,vc]).T]]
+    info = {'friction': None}
+    corner_paths = [[t0, vstack([xc,yc,uc,vc]).T, info]]
     z_np1 = debris.z0
     for n in range(nsteps):
         xc_hat = []
         yc_hat = []
-        t_n,corners_n = corner_paths[-1] # from previous time step
+        t_n,corners_n,info = corner_paths[-1] # from previous time step
         t_np1 = t_n + dt
         for k in range(ncorners):
             xk_n, yk_n, uk_n, vk_n = corners_n[k,:]  # unpack k'th row
@@ -97,7 +98,7 @@ def test_corner_paths_square():
     
     figure(1);clf();
     for k in range(nsteps):
-        tk,cpk = corner_paths[k]
+        tk,cpk,info = corner_paths[k]
         plot(cpk[:,0],cpk[:,1],'b')
         # one edge different color to show orientation:
         plot(cpk[:2,0],cpk[:2,1],'c')
@@ -119,7 +120,7 @@ def test_corner_paths_triangle():
     
     figure(1);clf();
     for k in range(nsteps):
-        tk,cpk = corner_paths[k]
+        tk,cpk,info = corner_paths[k]
         plot(cpk[:,0],cpk[:,1],'b')
         # one edge different color to show orientation:
         plot(cpk[:2,0],cpk[:2,1],'c')
@@ -150,9 +151,10 @@ class DebrisObject():
         
         # these can be generated using velocity field from CFD simulation:
         self.times = []
-        self.corner_paths = [] # should be list of [t_n, corners_n] where
+        self.corner_paths = [] # should be list of [t_n, corners_n, info] where
                                # corners_n is array with columns [xc,yc,uc,vc]
                                # at each time t_n in self.times
+                               # and info is a dictionary for info to save
 
     @property
     def mass(self):
@@ -194,8 +196,10 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
     uc = zeros(ncorners)
     vc = zeros(ncorners)
     
-    corner_paths = [[t0, vstack([xc,yc,uc,vc]).T]]
+    info = {'friction': 'static'}  # since not moving at t0
+    corner_paths = [[t0, vstack([xc,yc,uc,vc]).T, info]]
     z_np1 = debris.z0
+    
     for n in range(nsteps):
         xc_hat = []
         yc_hat = []
@@ -203,8 +207,9 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
         #vc_np1 = []
         uc_np1 = zeros(ncorners)  # may get modified below
         vc_np1 = zeros(ncorners)
-        t_n,corners_n = corner_paths[-1] # from previous time step
+        t_n,corners_n,info_n = corner_paths[-1] # from previous time step
         t_np1 = t_n + dt
+        #info_np1 = info_n.copy()  
         
         # move corners based on velocities uc_n, vc_n computed at end of last
         # step, but call these uc_hat, vc_hat since they don't maintain rigid
@@ -243,7 +248,8 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
             if verbose:
                 print('No friction at t = %.2f with h_ave = %.1f' \
                     % (t_np1,h_ave))
-            
+        
+        info_np1 = {'friction': friction}  # pass back for plotting purposes
 
         #print('At t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
         wet_face_height = min(h_ave, debris.draft)
@@ -338,7 +344,7 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
             vc_np1[k] = vk_np1
         
         corners_np1 = vstack([xc_np1,yc_np1,uc_np1,vc_np1]).T
-        corner_paths.append([t_np1, corners_np1])
+        corner_paths.append([t_np1, corners_np1, info_np1])
     
     return corner_paths         
     
@@ -365,14 +371,14 @@ def test_corner_paths_accel():
     
     figure(1);clf();
     for k in range(nsteps):
-        tk,cpk = corner_paths[k]
+        tk,cpk,info = corner_paths[k]
         plot(cpk[:,0],cpk[:,1],'b')
         if mod(k,5) == 0:
             text(cpk[:,0].mean(), cpk[:,1].mean()+1, 't = %.1f' % tk,
                  color='b',fontsize=8)
         # one edge different color to show orientation:
         #plot(cpk[:2,0],cpk[:2,1],'c')
-        tk,cpk = corner_paths_a[k]
+        tk,cpk,info = corner_paths_a[k]
         plot(cpk[:,0],cpk[:,1],'r')
         if mod(k,5) == 0:
             text(cpk[:,0].mean(), cpk[:,1].mean()-1.5, 't = %.1f' % tk,
@@ -392,7 +398,7 @@ if __name__ == '__main__':
     #debris.z0 = [3,1,pi/4]
     debris.z0 = [0,0,0]
     debris.advect = False
-    debris.rho = 500.
+    debris.rho = 100.
     print('Draft = %.2fm' % debris.draft)
         
     u,v = velocities_shear()
@@ -401,8 +407,8 @@ if __name__ == '__main__':
     #h = lambda x,y,t: 0.55
     
     t0 = 0.
-    nsteps = 250
-    dt = 0.2
+    nsteps = 150
+    dt = 0.3
     corner_paths_a = make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps)
     
     if 1:
@@ -412,30 +418,33 @@ if __name__ == '__main__':
         debris2.phi = [pi/2, 0., pi/2, 0., pi/2, 0., pi/2, 0.]
         debris2.z0 = [0,0,0]
         debris2.advect = False
-        debris2.rho = 500.
+        debris2.rho = 100.
         corner_paths_2 = make_corner_paths_accel(debris2,h,u,v,t0,dt,nsteps)
     else:
         corner_paths_2 = None
     
     fig = figure(1, figsize=(12,6))
     clf()
-    tk,cpk = corner_paths_a[0]
-    plotk_a, = plot(cpk[:,0],cpk[:,1],'b')
+    tk,cpk,info = corner_paths_a[0]
+    c = {None:'g', 'static':'r', 'kinetic':'orange'}
+    plotk_a, = plot(cpk[:,0],cpk[:,1],color=c[info['friction']],lw=2)
     if corner_paths_2:
-        tk,cpk2 = corner_paths_2[0]
-        plotk_2, = plot(cpk2[:,0],cpk2[:,1],'r')
+        tk,cpk2,info = corner_paths_2[0]
+        plotk_2, = plot(cpk2[:,0],cpk2[:,1],color=c[info['friction']],lw=3)
     h0 = h(0,0,tk)
     title_text = title('time t = %.2fs, h = %.2fm' % (tk,h0))
     axis('scaled')
-    axis([-1,30,-2,2])
+    axis([-1,20,-2,2])
     grid(True)
     
     def update(k):
-        tk,cpk = corner_paths_a[k]
+        tk,cpk,info = corner_paths_a[k]
         plotk_a.set_data(cpk[:,0],cpk[:,1])
+        plotk_a.set_color(c[info['friction']])
         if corner_paths_2:
-            tk,cpk2 = corner_paths_2[k]
+            tk,cpk2,info = corner_paths_2[k]
             plotk_2.set_data(cpk2[:,0],cpk2[:,1])
+            plotk_2.set_color(c[info['friction']])
         h0 = h(0,0,tk)
         title_text.set_text('time t = %.2fs, h = %.2fm' % (tk,h0))
         
