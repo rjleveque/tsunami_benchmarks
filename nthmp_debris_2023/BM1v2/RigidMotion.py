@@ -4,28 +4,6 @@ from scipy.optimize import least_squares
 import matplotlib.animation as animation
 
 
-def make_corners_fcn(L,phi):
-    
-    def corners(z):
-        """
-        convert z = [x0,y0,theta] into a list of corners, assuming (x0,y0) is
-        starting corner and moving at angle theta (up from x-axis) to 2nd corner.
-        Length of first side is L0, then turn through angle phi1, etc.
-        """
-        x0,y0,theta = z # unpack
-        xc = zeros(len(L)+1)
-        yc = zeros(len(L)+1)
-        xc[0] = x0
-        yc[0] = y0
-        phitot = theta
-        for k in range(len(L)):
-            phitot = phitot + phi[k]
-            xc[k+1] = xc[k] + L[k]*cos(phitot)
-            yc[k+1] = yc[k] + L[k]*sin(phitot)
-        return xc,yc
-        
-    return corners
-
 
 def F(z, *args, **kwargs):
     
@@ -50,6 +28,18 @@ def remap(xc_hat, yc_hat, z_guess, corners):
     Adjust xc_hat, yc_hat to xc,yc so that original shape is preserved.
     z_guess is initial guess for z defining xc,yc.
     """
+    
+    def F(z, *args, **kwargs):
+        # Function for least squares fitting
+        # compute current guess at corners from z:
+        xc,yc = corners(z)
+
+        # compute residuals between current corners and target:
+        f = zeros(2*len(xc))
+        for i in range(len(xc)):
+            f[2*i] = xc[i] - xc_hat[i]
+            f[2*i+1] = yc[i] - yc_hat[i]
+        return f
     
     result = least_squares(F,z_guess,args=(xc_hat,yc_hat,corners))
     xc,yc = corners(result['x'])
@@ -176,15 +166,16 @@ class DebrisObject():
         Length of first side is L0, then turn through angle phi1, etc.
         """
         x0,y0,theta = z # unpack
-        xc = zeros(len(L)+1)
-        yc = zeros(len(L)+1)
+        xc = zeros(len(self.L)+1)
+        yc = zeros(len(self.L)+1)
         xc[0] = x0
         yc[0] = y0
         phitot = theta
-        for k in range(len(L)):
-            phitot = phitot + phi[k]
-            xc[k+1] = xc[k] + L[k]*cos(phitot)
-            yc[k+1] = yc[k] + L[k]*sin(phitot)
+        #import pdb; pdb.set_trace()
+        for k in range(len(self.L)):
+            phitot = phitot + self.phi[k]
+            xc[k+1] = xc[k] + self.L[k]*cos(phitot)
+            yc[k+1] = yc[k] + self.L[k]*sin(phitot)
         return xc,yc
 
 def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps):
@@ -264,20 +255,22 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps):
     return corner_paths         
     
 def test_corner_paths_accel():
-    L = [1,1,1,1]
-    phi = [pi/2, pi/2, pi/2, pi/2]
-    z0 = [0,0.5,0]
     
     debris = DebrisObject()
+    debris.L = [1,1,1,1]
+    debris.phi = [pi/2, pi/2, pi/2, pi/2]
+    #debris.z0 = [3,1,pi/4]
+    debris.z0 = [0,0,0]
+    #debris.advect = False
+    
     debris.rho = 500.
         
     u,v = velocities_shear()
     h = lambda x,y,t: 10.  # fluid depth
     
     t0 = 0.
-    nsteps = 20
-    dt = 2*pi/nsteps
-    z0 = [3,1,pi/4]
+    nsteps = 50
+    dt = 1.
     corner_paths_a = make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps)
     corner_paths = make_corner_paths(debris,u,v,t0,dt,nsteps)
     
@@ -289,6 +282,7 @@ def test_corner_paths_accel():
         #plot(cpk[:2,0],cpk[:2,1],'c')
         tk,cpk = corner_paths_a[k]
         plot(cpk[:,0],cpk[:,1],'r')
-    axis('square')
+    axis('equal')
+    grid(True)
     
     return corner_paths, corner_paths_a
