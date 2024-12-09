@@ -12,7 +12,6 @@ output_format = 'binary32'
 
 # List of frames to use for making debris paths and animation:
 fgframes = range(10,121)
-#fgframes = range(10,21)
 
 # Instantiate object for reading fgout frames:
 fgout_grid = fgout_tools.FGoutGrid(1, outdir, output_format)
@@ -35,6 +34,7 @@ for k,fgframeno in enumerate(fgframes):
     fgout_h_txy[k,:,:] = fgout.h
     fgout_u_txy[k,:,:] = fgout.u
     fgout_v_txy[k,:,:] = fgout.v
+    
     
 print('\nLoaded %i fgout frames at times: \n     %s' % (len(fgframes), fgout_times))
 print('Each frame is on a %i by %i grid with' % (len(x),len(y)))

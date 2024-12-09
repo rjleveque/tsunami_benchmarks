@@ -5,49 +5,12 @@ from matplotlib import colors
 import numpy as np
 from clawpack.visclaw import animation_tools, plottools, geoplot
 from clawpack.geoclaw import fgout_tools
-import RigidMotion
-from load_fgout import h_fcn, u_fcn, v_fcn, fgout_times, fgout_h_txy
-
-outdir = '../BM1/SWE2d/_output_dtopo1'
-format = 'binary32'  # format of fgout grid output
+import debris_tracking
+from load_fgout import fgout_grid, h_fcn, u_fcn, v_fcn, fgout_times, \
+                       fgout_h_txy, fgout_u_txy, fgout_v_txy
 
 
-print('Looking for output in ',outdir)
-
-output_format = 'binary32'
-
-# List of frames to use for making debris paths and animation:
-#fgframes = range(10,121)
-fgframes = range(10,21)
-#fgframes = [30,31,32]
-
-
-bgimage = None
-#plot_extent = [34, 43.75, -3, 3]
-xlimits = [-3, 3]
-ylimits = [43.75, 34]
-#flipud = lambda A: fliplr(flipud(A))  # x is vertical in plots
-flipud = lambda A: A
-
-color = 'k'
-linewidth = 1
-
-
-# Instantiate object for reading fgout frames:
-fgout_grid = fgout_tools.FGoutGrid(1, outdir, output_format)
-fgout_grid.read_fgout_grids_data_pre511()
-
-# Deterime time t0 of first fgout frame, to initialize particles
-frameno0 = fgframes[0]
-fgout0 = fgout_grid.read_frame(frameno0)
-t0 = fgout0.t
-
-x1fg,x2fg,y1fg,y2fg = fgout0.extent_edges
-fgout_extent = [y1fg,y2fg,x2fg,x1fg]  # for rotated
-print('fgout0.extent_edges = ', fgout0.extent_edges)
-print('fgout_extent = ', fgout_extent)
-
-debris = RigidMotion.DebrisObject()
+debris = debris_tracking.DebrisObject()
 debris.L = 4 * [0.6]
 debris.phi = [0, pi/2, pi/2, pi/2]
 debris.height = 0.4
@@ -56,7 +19,7 @@ debris.face_width = debris.L[0]  # assuming square
 debris.z0 = [34.34, 0.22, 0]
 debris.friction_static = 0.35
 debris.friction_kinetic = 0.25
-debris.advect = False
+debris.advect = True
 mass = 14.5 # kg
 debris.rho = mass / (debris.height * debris.bottom_area)
 print('Draft = %.2fm' % debris.draft)
@@ -64,16 +27,30 @@ print('Draft = %.2fm' % debris.draft)
 
 
 t0 = 34.
-nsteps = 50 #221
+nsteps = 120 #221
 dt = 0.1
-corner_paths = RigidMotion.make_corner_paths_accel(debris,h_fcn,u_fcn,v_fcn,
-                                                   t0,dt,nsteps,verbose=True)
+corner_paths = debris_tracking.make_corner_paths_accel(debris,h_fcn,u_fcn,v_fcn,
+                                                   t0,dt,nsteps,verbose=False)
 
 corner_paths_2 = None  # no comparison
 
 if 1:
     # ===========
     # plotting
+    
+
+    bgimage = None
+    #plot_extent = [34, 43.75, -3, 3]
+    xlimits = [-3, 3]
+    ylimits = [43.75, 34]
+    #flipud = lambda A: fliplr(flipud(A))  # x is vertical in plots
+    flipud = lambda A: A
+
+    color = 'k'
+    linewidth = 1
+
+    fge1 = fgout_grid.extent_edges  # for imshow plots
+    fgout_extent = [fge1[2],fge1[3],fge1[1],fge1[0]]
 
     fig,ax = subplots(figsize=(6,7))
 
@@ -83,6 +60,7 @@ if 1:
     #ax.plot([y1b,y1b,y2b,y2b,y1b], [x1b,x2b,x2b,x1b,x1b], 'g')
 
     imqoi = 'Depth'
+    fgframeno = 0  # initial fgout frame to use from fgout_h_txy
 
     if imqoi=='Depth':
         # depth
@@ -111,7 +89,7 @@ if 1:
 
         norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
         
-        fgout_h = fgout0.h
+        fgout_h = fgout_h_txy[fgframeno,:,:]
         eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
         
         im = imshow(flipud(eta_water), extent=fgout_extent,
@@ -129,14 +107,14 @@ if 1:
         ax.set_xlim(xlimits)
         ax.set_ylim(ylimits)
         
-        t = fgout0.t
-        t_str = '%.2f seconds' % t
+        t_str = '%.2f seconds' % t0
         title_text = title('%s at t = %s' % (imqoi,t_str))
         
     else:
         # speed
         s_units = 'm/s'
-        fgout_s = fgout0.s
+        fgout_s = sqrt(fgout_u_txy[fgframeno,:,:]**2 + \
+                       fgout_v_txy[fgframeno,:,:]**2)
         if s_units == 'knots':
             s = fgout_s * 1.9438  # convert m/s to knots
             bounds_speed = np.array([1e-3,3,4,6,9,12])  # knots
@@ -175,8 +153,7 @@ if 1:
         ax.set_xlim(xlimits)
         ax.set_ylim(ylimits)
 
-        t = fgout0.t
-        t_str = '%.2f seconds' % t
+        t_str = '%.2f seconds' % t0
         title_text = title('%s at t = %s' % (imqoi,t_str))
 
     # plot debris square:
@@ -209,11 +186,13 @@ if 1:
             eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
             im.set_data(flipud(eta_water))
         else:
-            fgout_s = fgout_u_txy[fgframeno,:,:]
+            fgout_s = sqrt(fgout_u_txy[fgframeno,:,:]**2 + \
+                           fgout_v_txy[fgframeno,:,:]**2)
             im.set_data(flipud(fgout_s))
             
         t_str = '%.2f seconds' % tk
         title_text.set_text('%s at t = %s' % (imqoi,t_str))
+        print('+++ k,fgframeno,eta_water.max(): ',k,fgframeno,eta_water.max())
         
 
     if 0:
@@ -258,7 +237,7 @@ if __name__ == '__main__':
                                    frames=len(corner_paths), 
                                    interval=200, blit=False)
 
-    fname_mp4 = 'corner_paths.mp4'
+    fname_mp4 = 'config1a.mp4'
     fps = 5
     print('Making mp4...')
     animation_tools.make_mp4(anim, fname_mp4, fps)
