@@ -237,7 +237,7 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
         dx_wall = max(xc_np1) - xwall2
         if dx_wall > 0:
             xc_np1 = [x - dx_wall for x in xc_np1]
-            uc_np1 = [-u for u in uc_np1]
+            uc_np1 = [-0.5*u for u in uc_np1]
             print('+++ negated uc at wall')
             #uc_np1 = [0. for u in uc_np1]
         
