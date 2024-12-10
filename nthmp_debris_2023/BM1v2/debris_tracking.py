@@ -88,7 +88,7 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
         #info_np1 = info_n.copy()  
         
         # move corners based on velocities uc_n, vc_n computed at end of last
-        # step, but call these uc_hat, vc_hat since they don't maintain rigid
+        # step, but call these xc_hat, yc_hat since they don't maintain rigid
         # body constraint yet:
         for k in range(ncorners):
             xk_n, yk_n, uk_n, vk_n = corners_n[k,:]  # unpack k'th row
@@ -153,8 +153,9 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
             uk_f = u(xk_np1, yk_np1, t_np1)
             vk_f = v(xk_np1, yk_np1, t_np1)
             
-            print('+++ k = %i, uk_f = %.3f  vk_f = %.3f' % (k,uk_f,vk_f))
+            #print('+++ k = %i, uk_f = %.3f  vk_f = %.3f' % (k,uk_f,vk_f))
             if isnan(uk_f):
+                print('*** uk_f is nan at ', xk_np1, yk_np1, t_np1)
                 import pdb; pdb.set_trace()
             
             if debris.advect:
@@ -186,11 +187,15 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
                     if friction == 'static':
                         Ffriction = debris.friction_static * Ffriction1
                         Fnet = max(0., Ffluid - Ffriction)
+                        # now rescale (Ffluid_x, Ffluid_y) vector
+                        # to have length Fnet (net force after static friction)
                         if abs(Ffluid) < 0.01:
                             Fnet_x = Fnet_y = 0.
                         else:
                             Fnet_x = Ffluid_x * Fnet / Ffluid
                             Fnet_y = Ffluid_y * Fnet / Ffluid
+                        print('+++s at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
+                             % (t_n, k, Ffluid, Ffriction, Fnet_x))
                     elif friction == 'kinetic':
                         Ffriction = debris.friction_kinetic * Ffriction1
                         sk_n = sqrt(uk_n**2 + vk_n**2)
@@ -199,6 +204,8 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
                         
                         Fnet_x = Ffluid_x
                         Fnet_y = Ffluid_y
+                        print('+++k at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
+                             % (t_n, k, Ffluid, Ffriction, Fnet_x))
                         
                     if verbose:
                         print('k = %i, Ffluid = %.3f, Ffriction = %.3f' \
@@ -223,6 +230,16 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
             
             uc_np1[k] = uk_np1
             vc_np1[k] = vk_np1
+            
+        # check for bouncing off back wall -- NEED TO IMPROVE
+        xwall2 = 43.75
+        
+        dx_wall = max(xc_np1) - xwall2
+        if dx_wall > 0:
+            xc_np1 = [x - dx_wall for x in xc_np1]
+            #uc_np1 = [-u for u in uc_np1]
+            #print('+++ negated uc at wall')
+            uc_np1 = [0. for u in uc_np1]
         
         corners_np1 = vstack([xc_np1,yc_np1,uc_np1,vc_np1]).T
         corner_paths.append([t_np1, corners_np1, info_np1])

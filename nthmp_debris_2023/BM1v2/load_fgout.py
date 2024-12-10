@@ -12,6 +12,7 @@ output_format = 'binary32'
 
 # List of frames to use for making debris paths and animation:
 fgframes = range(10,121)
+#fgframes = range(10,30)
 
 # Instantiate object for reading fgout frames:
 fgout_grid = fgout_tools.FGoutGrid(1, outdir, output_format)
