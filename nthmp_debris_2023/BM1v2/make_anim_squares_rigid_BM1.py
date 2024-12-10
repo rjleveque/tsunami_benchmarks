@@ -16,9 +16,9 @@ debris.height = 0.4
 debris.bottom_area = debris.L[0]*debris.L[1]  # assuming rectangle
 debris.face_width = debris.L[0]  # assuming square
 debris.z0 = [34.34, 0.22, 0]
-debris.friction_static = 0.35
-debris.friction_kinetic = 0.25
-debris.advect = False  #True
+debris.friction_static = 0. #0.35
+debris.friction_kinetic = 0. #0.25
+debris.advect = True  #False
 mass = 14.5 # kg
 debris.rho = mass / (debris.height * debris.bottom_area)
 print('Draft = %.2fm' % debris.draft)
@@ -211,7 +211,7 @@ if 1:
 
     # plot debris square:
     
-    c = {None:'g', 'static':'r', 'kinetic':'orange'}
+    c = {'no':'g', 'static':'r', 'kinetic':'orange'}
     
     tk,cpk,info = corner_paths[0]
     plotk, = plot(cpk[:,1],cpk[:,0],color=c[info['friction']],lw=2)

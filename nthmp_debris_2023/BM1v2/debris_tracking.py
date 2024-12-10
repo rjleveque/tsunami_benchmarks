@@ -108,22 +108,22 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
         hc_np1 = array([h(x,y,t_np1) for x,y in zip(xc_np1,yc_np1)])
         h_ave = hc_np1.mean()
         
+        friction = 'no'
         if h_ave < debris.draft:
             if (abs(corners_n[:,2]).max() + abs(corners_n[:,3]).max()) < 1e-3:
                 # corner velocities at t_n were all zero, check static friction:
                 friction = 'static'
             else:
                 friction = 'kinetic'
-            if verbose:
-                print('%s friction at t = %.2f with h_ave = %.1f' \
-                    % (friction,t_np1,h_ave))
-        else:
-            # debris is not touching ground:
-            friction = None
-            if verbose:
-                print('No friction at t = %.2f with h_ave = %.1f' \
-                    % (t_np1,h_ave))
-        
+
+        if friction == 'static' and debris.friction_static == 0.:
+            friction = 'no'
+        if friction == 'kinetic' and debris.friction_kinetic == 0.:
+            friction = 'no'
+        if verbose:
+            print('%s friction at t = %.2f with h_ave = %.1f' \
+                % (friction,t_np1,h_ave))
+                            
         info_np1 = {'friction': friction}  # pass back for plotting purposes
 
         #print('At t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
@@ -159,7 +159,7 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
                 import pdb; pdb.set_trace()
             
             if debris.advect:
-                if friction is None:
+                if friction == 'no':
                     # to advect with flow, corner velocity = fluid velocity:
                     uk_np1 = uk_f
                     vk_np1 = vk_f
@@ -180,7 +180,7 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
                 #Ffluid_y = 0.
                 Ffluid = sqrt(Ffluid_x**2 + Ffluid_y**2)
                 
-                if friction is not None:
+                if friction != 'no':
                     Ffriction1 = debris.grav * corner_bottom_area \
                                 * (debris.rho * debris.height - \
                                    debris.rho_water * h_ave)
@@ -237,9 +237,9 @@ def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
         dx_wall = max(xc_np1) - xwall2
         if dx_wall > 0:
             xc_np1 = [x - dx_wall for x in xc_np1]
-            #uc_np1 = [-u for u in uc_np1]
-            #print('+++ negated uc at wall')
-            uc_np1 = [0. for u in uc_np1]
+            uc_np1 = [-u for u in uc_np1]
+            print('+++ negated uc at wall')
+            #uc_np1 = [0. for u in uc_np1]
         
         corners_np1 = vstack([xc_np1,yc_np1,uc_np1,vc_np1]).T
         corner_paths.append([t_np1, corners_np1, info_np1])
