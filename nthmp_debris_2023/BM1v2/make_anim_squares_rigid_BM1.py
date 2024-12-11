@@ -10,12 +10,11 @@ import debris_tracking
 
 
 debris = debris_tracking.DebrisObject()
-debris.L = 4 * [0.6]
-debris.phi = [0, pi/2, pi/2, pi/2]
+debris.L = 3 * [0.6]  # 3 sides define square, will have 4 corners
+debris.phi = [0, pi/2, pi/2]
 debris.height = 0.4
 debris.bottom_area = debris.L[0]*debris.L[1]  # assuming rectangle
 debris.face_width = debris.L[0]  # assuming square
-debris.z0 = [34.34, 0.22, 0]
 debris.friction_static = 0.35
 debris.friction_kinetic = 0.25
 debris.advect = False
@@ -23,7 +22,7 @@ mass = 14.5 # kg
 debris.rho = mass / (debris.height * debris.bottom_area)
 print('Draft = %.2fm' % debris.draft)
 
-use_sim_data = True
+use_sim_data = False
 
 if not use_sim_data:
 
@@ -78,14 +77,23 @@ else:
     
 
 
-
+z0 = [34.34, 0.22, 0]  # determines initial debris location
 t0 = 34.
 nsteps = 120 #221
 dt = 0.1
-corner_paths = debris_tracking.make_corner_paths_accel(debris,h_fcn,u_fcn,v_fcn,
-                                                   t0,dt,nsteps,verbose=True)
 
-corner_paths_2 = None  # no comparison
+if 0:
+    # old
+    corner_paths = debris_tracking.make_corner_paths_accel(debris,
+                                                   h_fcn,u_fcn,v_fcn,
+                                                   t0,dt,nsteps,verbose=True)
+    corner_paths_2 = None
+                                              
+debris_path = debris_tracking.make_debris_path(debris,z0,t0,dt,nsteps,
+                                               h_fcn,u_fcn,v_fcn, verbose=True)
+
+debris_path2 = None  # no comparison
+
 
 if 1:
     # ===========
@@ -213,26 +221,44 @@ if 1:
     
     c = {'no':'g', 'static':'r', 'kinetic':'orange'}
     
-    tk,cpk,info = corner_paths[0]
-    plotk, = plot(cpk[:,1],cpk[:,0],color=c[info['friction']],lw=2)
-    if corner_paths_2:
-        tk,cpk2,info = corner_paths_2[0]
-        plotk_2, = plot(cpk2[:,1],cpk2[:,0],color=c[info['friction']],lw=3)
-
-    
-    def update(k):
-            
-        tk,cpk,info = corner_paths[k]
-        plotk.set_data(cpk[:,1],cpk[:,0])
-        plotk.set_color(c[info['friction']])
+    if 0:
+        # old
+        tk,cpk,info = corner_paths[0]
+        plotk, = plot(cpk[:,1],cpk[:,0],color=c[info['friction']],lw=2)
         if corner_paths_2:
-            tk,cpk2,info = corner_paths_2[k]
-            plotk_2.set_data(cpk2[:,1],cpk2[:,0])
-            plotk_2.set_color(c[info['friction']])
+            tk,cpk2,info = corner_paths_2[0]
+            plotk_2, = plot(cpk2[:,1],cpk2[:,0],color=c[info['friction']],lw=3)
+
+    t_n = t0
+    z_n = debris_path.z_path[0]
+    info_n = debris_path.info_path[0]
+    xc,yc = debris.get_corners(z_n, close_poly=True)
+    plotn, = plot(yc, xc, color=c[info_n['friction']], lw=3)
+    
+    def update(n):
+
+        if 0:
+            tk,cpk,info = corner_paths[k]
+            plotk.set_data(cpk[:,1],cpk[:,0])
+            plotk.set_color(c[info['friction']])
+            if corner_paths_2:
+                tk,cpk2,info = corner_paths_2[k]
+                plotk_2.set_data(cpk2[:,1],cpk2[:,0])
+                plotk_2.set_color(c[info['friction']])
+                        
+        t_n = debris_path.times[n]
+        z_n = debris_path.z_path[n]
+        info_n = debris_path.info_path[n]
+        
+        # update plot of debris:
+        xc,yc = debris.get_corners(z_n, close_poly=True)
+        plotn.set_data(yc,xc)
+        plotn.set_color(c[info_n['friction']])
+
 
         # color image:
         # choose closes fgout frame for now...
-        fgframeno = where(fgout_times <= tk)[0].max()
+        fgframeno = where(fgout_times <= t_n)[0].max()
         
         if imqoi == 'Depth':
             fgout_h = fgout_h_txy[fgframeno,:,:]
@@ -243,12 +269,12 @@ if 1:
                            fgout_v_txy[fgframeno,:,:]**2)
             im.set_data(flipud(fgout_s))
             
-        t_str = '%.2f seconds' % tk
+        t_str = '%.2f seconds' % t_n
         title_text.set_text('%s at t = %s' % (imqoi,t_str))
         
 
     if 0:
-        # plot center of mass path
+        # plot center of mass path  OLD
         xcm = zeros(times.shape)
         ycm = zeros(times.shape)
         ndebris = 4
@@ -283,7 +309,7 @@ if 1:
         print('Created ',fname)
 
     
-def plot_centroids(corner_paths):
+def plot_centroids_old(corner_paths):
     centroids_x = array([c[1][:,0].mean() for c in corner_paths])
     centroids_y = array([c[1][:,1].mean() for c in corner_paths])
     centroids_u = array([c[1][:,2].mean() for c in corner_paths])
@@ -325,12 +351,55 @@ def plot_centroids(corner_paths):
     print('Created ',fname)
 
     return centroids_x, centroids_y, centroids_u, centroids_v
+
+def plot_centroids(debris_path):
+    centroids_x = array([xc.mean() for xc in debris_path.x_path])
+    centroids_y = array([yc.mean() for yc in debris_path.y_path])
+    centroids_u = array([uc.mean() for uc in debris_path.u_path])
+    centroids_v = array([vc.mean() for vc in debris_path.v_path])
+    times = debris_path.times
     
+    d = loadtxt('/Users/rjl/git/tsunami_benchmarks/nthmp_debris_2023/BM1/Benchmark_1/comparison_data/paths_and_velocities/config1_vel.txt')
+    figure(201,figsize=(8,7)); clf()
+    subplot(211)
+    plot(times,centroids_x,'b',label='GeoClaw')
+    plot(d[:,0], d[:,1], 'c', label='provided data')
+    legend(loc='upper left', framealpha=1)
+    grid(True)
+    title('x-position')
+    ylabel('x (m)')
+    subplot(212)
+    plot(times,centroids_u,'b',label='GeoClaw')
+    plot(d[:,0], d[:,3], 'c', label='provided data')
+    legend(loc='upper left', framealpha=1)
+    grid(True)
+    title('cross-shore velocity')
+    xlabel('time (sec)')
+    ylabel('u velocity (m/s)')
+    tight_layout()
+    fname = 'centroids_xu.png'
+    savefig(fname, bbox_inches='tight')
+    print('Created ',fname)
+    
+    figure(202, figsize=(5,7)); clf()
+    plot(centroids_y, centroids_x, 'b-')
+    plot(centroids_y[::3], centroids_x[::3], 'b.', markersize=3)
+    axis([-1,1,44,34])
+    title('Centroid location for config 1')
+    xlabel('y (m)')
+    ylabel('x (m)')
+    grid(True)
+    fname = 'centroids_yx.png'
+    savefig(fname, bbox_inches='tight')
+    print('Created ',fname)
+
+    return centroids_x, centroids_y, centroids_u, centroids_v
+        
 if __name__ == '__main__':
         
     print('Making anim...')
     anim = animation.FuncAnimation(fig, update,
-                                   frames=len(corner_paths), 
+                                   frames=len(debris_path.times), 
                                    interval=200, blit=False)
 
     fname_mp4 = 'config1a.mp4'
@@ -338,7 +407,7 @@ if __name__ == '__main__':
     print('Making mp4...')
     animation_tools.make_mp4(anim, fname_mp4, fps)
     
-    centroids = plot_centroids(corner_paths)
+    centroids = plot_centroids(debris_path)
     
     if use_sim_data:
         print('USING SIM DATA')
