@@ -8,7 +8,6 @@ from clawpack.geoclaw import fgout_tools
 import debris_tracking
 
 
-
 debris = debris_tracking.DebrisObject()
 debris.L = 3 * [0.6]  # 3 sides define square, will have 4 corners
 debris.phi = [0, pi/2, pi/2]
@@ -22,7 +21,7 @@ mass = 14.5 # kg
 debris.rho = mass / (debris.height * debris.bottom_area)
 print('Draft = %.2fm' % debris.draft)
 
-use_sim_data = False
+use_sim_data = True
 
 if not use_sim_data:
 
@@ -40,11 +39,10 @@ else:
     u_vel_fcn = sim_data['u_vel_fcn']  # function that interpolates u_vel to (t,x)
 
     def u_fcn(x,y,t):
-        tx = (t,x)
-        u_vel = float(u_vel_fcn(tx))
-        if isnan(u_vel):
-            u_vel = 0.
-        return u_vel
+        tx = vstack((t,x)).T
+        u_vel = u_vel_fcn(tx)
+        u = where(isnan(u_vel), 0., u_vel)
+        return u
         
     v_fcn = lambda x,y,t: 0.
         
@@ -61,12 +59,9 @@ else:
         return B
         
     def h_fcn(x,y,t):
-        tx = (t,x)
-        zeta = float(zeta_fcn(tx))
-        if isnan(zeta):
-            h = 0.
-        else:
-            h = max(zeta - B(x), 0.)
+        tx = vstack((t,x)).T
+        zeta = zeta_fcn(tx)
+        h = where(isnan(zeta), 0., zeta - B(x))
         return h
         
     fgout_times = array([0, 30., 60.])
@@ -308,49 +303,7 @@ if 1:
         savetxt(fname,cmxyt)
         print('Created ',fname)
 
-    
-def plot_centroids_old(corner_paths):
-    centroids_x = array([c[1][:,0].mean() for c in corner_paths])
-    centroids_y = array([c[1][:,1].mean() for c in corner_paths])
-    centroids_u = array([c[1][:,2].mean() for c in corner_paths])
-    centroids_v = array([c[1][:,3].mean() for c in corner_paths])
-    times = array([c[0] for c in corner_paths])
-    
-    d = loadtxt('/Users/rjl/git/tsunami_benchmarks/nthmp_debris_2023/BM1/Benchmark_1/comparison_data/paths_and_velocities/config1_vel.txt')
-    figure(201,figsize=(8,7)); clf()
-    subplot(211)
-    plot(times,centroids_x,'b',label='GeoClaw')
-    plot(d[:,0], d[:,1], 'c', label='provided data')
-    legend(loc='upper left', framealpha=1)
-    grid(True)
-    title('x-position')
-    ylabel('x (m)')
-    subplot(212)
-    plot(times,centroids_u,'b',label='GeoClaw')
-    plot(d[:,0], d[:,3], 'c', label='provided data')
-    legend(loc='upper left', framealpha=1)
-    grid(True)
-    title('cross-shore velocity')
-    xlabel('time (sec)')
-    ylabel('u velocity (m/s)')
-    tight_layout()
-    fname = 'centroids_xu.png'
-    savefig(fname, bbox_inches='tight')
-    print('Created ',fname)
-    
-    figure(202, figsize=(5,7)); clf()
-    plot(centroids_y, centroids_x, 'b-')
-    plot(centroids_y[::3], centroids_x[::3], 'b.', markersize=3)
-    axis([-1,1,44,34])
-    title('Centroid location for config 1')
-    xlabel('y (m)')
-    ylabel('x (m)')
-    grid(True)
-    fname = 'centroids_yx.png'
-    savefig(fname, bbox_inches='tight')
-    print('Created ',fname)
 
-    return centroids_x, centroids_y, centroids_u, centroids_v
 
 def plot_centroids(debris_path):
     centroids_x = array([xc.mean() for xc in debris_path.x_path])
@@ -359,23 +312,44 @@ def plot_centroids(debris_path):
     centroids_v = array([vc.mean() for vc in debris_path.v_path])
     times = debris_path.times
     
+    if use_sim_data:
+        fluid_label = 'provided flowfield'
+    else:
+        fluid_label = 'GeoClaw SWE flowfield'
+    
     d = loadtxt('/Users/rjl/git/tsunami_benchmarks/nthmp_debris_2023/BM1/Benchmark_1/comparison_data/paths_and_velocities/config1_vel.txt')
-    figure(201,figsize=(8,7)); clf()
-    subplot(211)
-    plot(times,centroids_x,'b',label='GeoClaw')
-    plot(d[:,0], d[:,1], 'c', label='provided data')
-    legend(loc='upper left', framealpha=1)
+    figure(201,figsize=(8,8)); clf()
+    xlimits = (30,55)
+    
+    subplot(311)
+    plot(times,centroids_x,'b',label='GeoClaw tracking with %s' % fluid_label)
+    plot(d[:,0], d[:,1], 'c', label='provided comparison data')
+    legend(loc='lower right', framealpha=1)
     grid(True)
     title('x-position')
     ylabel('x (m)')
-    subplot(212)
-    plot(times,centroids_u,'b',label='GeoClaw')
-    plot(d[:,0], d[:,3], 'c', label='provided data')
-    legend(loc='upper left', framealpha=1)
+    xlim(xlimits)
+    
+    subplot(312)
+    plot(times,centroids_u,'b',label='GeoClaw tracking with %s' % fluid_label)
+    plot(d[:,0], d[:,3], 'c', label='provided comparison data')
+    legend(loc='upper right', framealpha=1)
     grid(True)
     title('cross-shore velocity')
-    xlabel('time (sec)')
     ylabel('u velocity (m/s)')
+    xlim(xlimits)
+
+    subplot(313)
+    centroids_h = h_fcn(centroids_x, centroids_y, times)
+    plot(times,100*centroids_h,'r',label=fluid_label)
+    legend(loc='upper right', framealpha=1)
+    grid(True)
+    title('water depth')
+    ylabel('water depth (cm)')
+    xlim(xlimits)
+    
+    xlabel('time (sec)')
+
     tight_layout()
     fname = 'centroids_xu.png'
     savefig(fname, bbox_inches='tight')
@@ -393,7 +367,7 @@ def plot_centroids(debris_path):
     savefig(fname, bbox_inches='tight')
     print('Created ',fname)
 
-    return centroids_x, centroids_y, centroids_u, centroids_v
+    return centroids_x, centroids_y, centroids_u, centroids_v, centroids_h
         
 if __name__ == '__main__':
         
