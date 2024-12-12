@@ -219,8 +219,8 @@ def make_debris_path(debris,z0,t0,dt,nsteps,h_fcn,u_fcn,v_fcn,verbose=False):
                         else:
                             Fnet_x = Ffluid_x * Fnet / Ffluid
                             Fnet_y = Ffluid_y * Fnet / Ffluid
-                        print('+++s at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
-                             % (t_n, k, Ffluid, Ffriction, Fnet_x))
+                        #print('+++s at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
+                        #     % (t_n, k, Ffluid, Ffriction, Fnet_x))
                     elif friction == 'kinetic':
                         Ffriction = debris.friction_kinetic * Ffriction1
                         sk_n = sqrt(uk_n**2 + vk_n**2)
@@ -229,8 +229,8 @@ def make_debris_path(debris,z0,t0,dt,nsteps,h_fcn,u_fcn,v_fcn,verbose=False):
 
                         Fnet_x = Ffluid_x
                         Fnet_y = Ffluid_y
-                        print('+++k at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
-                             % (t_n, k, Ffluid, Ffriction, Fnet_x))
+                        #print('+++k at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
+                        #     % (t_n, k, Ffluid, Ffriction, Fnet_x))
 
                     if verbose:
                         print('k = %i, Ffluid = %.3f, Ffriction = %.3f' \
@@ -479,6 +479,9 @@ def make_debris_path_list(debris_list, obst_list, z0_list,
         # avoiding collisions:
         xc_list, yc_list, z_list = remap_avoid(xc_hat_list, yc_hat_list,
                                           debris_list, obst_list, z_guess_list)
+        #print('+++ after remap_avoid:')
+        #print('+++ xc_list = ',repr(xc_list))
+        #print('+++ yc_list = ',repr(yc_list))
 
         for dbno in range(len(debris_list)):
             debris = debris_list[dbno]
@@ -561,6 +564,7 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
         """
         from shapely import Polygon
 
+        #print('+++ in F, z_all = ',z_all)
         f_total = array([], dtype=float)
 
         for dbno in range(len(debris_list)):
@@ -593,12 +597,19 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
 
             for dbno2 in range(dbno+1,len(debris_list)):
                 debris2 = debris_list[dbno2]
-                z2 = z_guess_list[dbno2]
-                xc2,yc2 = debris.get_corners(z2)
-                debris2_polygon = Polygon(vstack((xc2,yc2)).T)
+                #z2 = z_guess_list[dbno2] ### WRONG
+                z2 = z_all[3*dbno2:3*dbno2+3]
+                xc2,yc2 = debris2.get_corners(z2)
+                #print('+++ dbno2 = %i, z2 = %s' % (dbno2,z2))
+                debris2_polygon = Polygon(fliplr(vstack((xc2,yc2))).T)
                 overlap_area = debris2_polygon.intersection(debris_polygon).area
                 f_total = hstack((f_total, 100*overlap_area))
-                #print('+++ dbno = %i, dbno2 = %i' % (dbno,dbno2))
+                #print('+++ dbno = %i, dbno2 = %i, overlap = %g' \
+                #        % (dbno,dbno2,overlap_area))
+                #print('xc%i = %s' % (dbno,repr(array(xc))))
+                #print('yc%i = %s' % (dbno,repr(array(yc))))
+                #print('xc%i = %s' % (dbno2,repr(array(xc2))))
+                #print('yc%i = %s' % (dbno2,repr(array(yc2))))
 
         return f_total
 
@@ -613,7 +624,12 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
     result = least_squares(F,z_guess_all)
     #print('+++ remap_avoid result: ',result)
 
+
     z_all = result['x']
+    #print('+++ z_all after least squares: ',z_all)
+    #print('+++ calling F(z_all)')
+    F_all = F(z_all)
+    #print('+++ F: ',F_all)
     xc_list = []
     yc_list = []
     theta_list = []
@@ -622,9 +638,12 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
         z = z_all[3*dbno:3*dbno+3]
         z_list.append(z)
         xc,yc = debris_list[dbno].get_corners(z)
+        #print('+++ dbno = %i, z = %s' % (dbno,z))
         xc_list.append(xc)
         yc_list.append(yc)
         theta_list.append(z_all[3*dbno+2])
+        #print('xc%i = %s' % (dbno,repr(array(xc))))
+        #print('yc%i = %s' % (dbno,repr(array(yc))))
     return xc_list,yc_list,z_list
 
 

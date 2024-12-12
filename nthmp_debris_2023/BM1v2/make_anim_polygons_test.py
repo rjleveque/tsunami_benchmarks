@@ -7,7 +7,9 @@ from clawpack.visclaw import animation_tools, plottools, geoplot
 from clawpack.geoclaw import fgout_tools
 import debris_tracking
 from shapely import Polygon
+import copy
 
+# small debris:
 debris = debris_tracking.DebrisObject()
 debris.L = 3 * [0.6]  # 3 sides define square, will have 4 corners
 debris.phi = [0, pi/2, pi/2]
@@ -21,23 +23,35 @@ mass = 14.5 # kg
 debris.rho = mass / (debris.height * debris.bottom_area)
 print('Draft = %.2fm' % debris.draft)
 
-debris_list = [debris]
+config = 4
+
+if config in [1,2]:
+    debris_list = [debris]
+    z0 = [34.94, 0.82, 0]  # determines initial debris location
+    z0_list = [z0]
 
 
-debris = debris_tracking.DebrisObject()
-debris.L = 3 * [0.6]  # 3 sides define square, will have 4 corners
-debris.phi = [0, pi/2, pi/2]
-debris.height = 0.4
-debris.bottom_area = debris.L[0]*debris.L[1]  # assuming rectangle
-debris.face_width = debris.L[0]  # assuming square
-debris.friction_static = 0.35
-debris.friction_kinetic = 0.25
-debris.advect = False
-mass = 14.5 # kg
-debris.rho = mass / (debris.height * debris.bottom_area)
-print('Draft = %.2fm' % debris.draft)
+if config in [3,4]:
+    debris_list = [debris]
+    z0 = [34.94, 0.82, 0]
+    z0_list = [z0]
 
-debris_list.append(debris)
+    debris = copy.deepcopy(debris)
+    z0 = [34.94, 0.22, 0]
+    debris_list.append(debris)
+    z0_list.append(z0)
+
+    debris = copy.deepcopy(debris)
+    z0 = [34.34, 0.82, 0]
+    debris_list.append(debris)
+    z0_list.append(z0)
+
+    debris = copy.deepcopy(debris)
+    z0 = [34.34, 0.22, 0]
+    debris_list.append(debris)
+    z0_list.append(z0)
+
+
 
 obst_list = []
 
@@ -54,29 +68,18 @@ if 1:
     obst_polygon = Polygon(obst_p)
     obst_list.append(obst_polygon)
 
-if 1:
+if config not in [1,3,7]:
     # obstacle -- stationary block:
-    x1b = 35.54 - 0.6
-    x2b = 36.14 - 0.6
-    y1b = 1.22 - 0.6
-    y2b = 1.82 - 0.6
+    x1b = 35.54
+    x2b = 36.14
+    y1b = 1.22
+    y2b = 1.82
     obst_x = array([x1b,x1b,x2b,x2b])
     obst_y = array([y1b,y2b,y2b,y1b])
     obst_p = vstack((obst_x,obst_y)).T
     obst_polygon = Polygon(obst_p)
     obst_list.append(obst_polygon)
 
-if 1:
-    # obstacle -- stationary block:
-    x1b = 38.
-    x2b = 39.
-    y1b = -0.3
-    y2b = 0.7
-    obst_x = array([x1b,x1b,x2b,x2b])
-    obst_y = array([y1b,y2b,y2b,y1b])
-    obst_p = vstack((obst_x,obst_y)).T
-    obst_polygon = Polygon(obst_p)
-    obst_list.append(obst_polygon)
 
 use_sim_data = True
 
@@ -129,17 +132,13 @@ else:
 
 
 
-z0 = [34.34, 0.22, 0]  # determines initial debris location
 t0 = 34.
 nsteps = 120 #221
 dt = 0.1
 
-z0_2 = [36.5, -0.2, 0]
-z0_list = [z0,z0_2]
-
 debris_path_list = debris_tracking.make_debris_path_list(debris_list,
                                     obst_list,z0_list,t0,dt,nsteps,
-                                    h_fcn,u_fcn,v_fcn, verbose=True)
+                                    h_fcn,u_fcn,v_fcn, verbose=False)
 
 
 
@@ -282,6 +281,8 @@ if 1:
     for obst_poly in obst_list:
         obst_xy = array(obst_poly.exterior.coords)
         plot(obst_xy[:,1], obst_xy[:,0], 'c')
+
+    grid(True)
 
     def update(n):
 
