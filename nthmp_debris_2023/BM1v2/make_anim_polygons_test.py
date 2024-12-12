@@ -6,7 +6,7 @@ import numpy as np
 from clawpack.visclaw import animation_tools, plottools, geoplot
 from clawpack.geoclaw import fgout_tools
 import debris_tracking
-
+from shapely import Polygon
 
 debris = debris_tracking.DebrisObject()
 debris.L = 3 * [0.6]  # 3 sides define square, will have 4 corners
@@ -20,6 +20,47 @@ debris.advect = False
 mass = 14.5 # kg
 debris.rho = mass / (debris.height * debris.bottom_area)
 print('Draft = %.2fm' % debris.draft)
+
+debris_list = [debris]
+
+obst_list = []
+
+if 1:
+    # back wall:
+    xwall2 = 43.75
+    x1b = xwall2
+    x2b = xwall2 + 1
+    y1b = -5.
+    y2b = 5.
+    obst_x = array([x1b,x1b,x2b,x2b])
+    obst_y = array([y1b,y2b,y2b,y1b])
+    obst_p = vstack((obst_x,obst_y)).T
+    obst_polygon = Polygon(obst_p)
+    obst_list.append(obst_polygon)
+
+if 1:
+    # obstacle -- stationary block:
+    x1b = 35.54 - 0.6
+    x2b = 36.14 - 0.6
+    y1b = 1.22 - 0.6
+    y2b = 1.82 - 0.6
+    obst_x = array([x1b,x1b,x2b,x2b])
+    obst_y = array([y1b,y2b,y2b,y1b])
+    obst_p = vstack((obst_x,obst_y)).T
+    obst_polygon = Polygon(obst_p)
+    obst_list.append(obst_polygon)
+
+if 1:
+    # obstacle -- stationary block:
+    x1b = 38.
+    x2b = 39.
+    y1b = -0.3
+    y2b = 0.7
+    obst_x = array([x1b,x1b,x2b,x2b])
+    obst_y = array([y1b,y2b,y2b,y1b])
+    obst_p = vstack((obst_x,obst_y)).T
+    obst_polygon = Polygon(obst_p)
+    obst_list.append(obst_polygon)
 
 use_sim_data = True
 
@@ -77,17 +118,12 @@ t0 = 34.
 nsteps = 120 #221
 dt = 0.1
 
-if 0:
-    # old
-    corner_paths = debris_tracking.make_corner_paths_accel(debris,
-                                                   h_fcn,u_fcn,v_fcn,
-                                                   t0,dt,nsteps,verbose=True)
-    corner_paths_2 = None
+z0_list = [z0]
 
-debris_path = debris_tracking.make_debris_path(debris,z0,t0,dt,nsteps,
-                                               h_fcn,u_fcn,v_fcn, verbose=True)
+debris_path_list = debris_tracking.make_debris_path_list(debris_list,
+                                    obst_list,z0_list,t0,dt,nsteps,
+                                    h_fcn,u_fcn,v_fcn, verbose=True)
 
-debris_path2 = None  # no comparison
 
 
 if 1:
@@ -212,43 +248,37 @@ if 1:
         t_str = '%.2f seconds' % t0
         title_text = title('%s at t = %s' % (imqoi,t_str))
 
-    # plot debris square:
+    # plot debris:
 
     c = {'no':'g', 'static':'r', 'kinetic':'orange'}
 
-    if 0:
-        # old
-        tk,cpk,info = corner_paths[0]
-        plotk, = plot(cpk[:,1],cpk[:,0],color=c[info['friction']],lw=2)
-        if corner_paths_2:
-            tk,cpk2,info = corner_paths_2[0]
-            plotk_2, = plot(cpk2[:,1],cpk2[:,0],color=c[info['friction']],lw=3)
+    plot_debris_list = []
+    for debris_path in debris_path_list:
+        t_n = t0
+        z_n = debris_path.z_path[0]
+        info_n = debris_path.info_path[0]
+        xc,yc = debris.get_corners(z_n, close_poly=True)
+        plotn, = plot(yc, xc, color=c[info_n['friction']], lw=3)
+        plot_debris_list.append(plotn)
 
-    t_n = t0
-    z_n = debris_path.z_path[0]
-    info_n = debris_path.info_path[0]
-    xc,yc = debris.get_corners(z_n, close_poly=True)
-    plotn, = plot(yc, xc, color=c[info_n['friction']], lw=3)
+    #plot_obst_list = []
+    for obst_poly in obst_list:
+        obst_xy = array(obst_poly.exterior.coords)
+        plot(obst_xy[:,1], obst_xy[:,0], 'c')
 
     def update(n):
 
-        if 0:
-            tk,cpk,info = corner_paths[k]
-            plotk.set_data(cpk[:,1],cpk[:,0])
-            plotk.set_color(c[info['friction']])
-            if corner_paths_2:
-                tk,cpk2,info = corner_paths_2[k]
-                plotk_2.set_data(cpk2[:,1],cpk2[:,0])
-                plotk_2.set_color(c[info['friction']])
+        for dbno in range(len(debris_list)):
+            debris_path = debris_path_list[dbno]
+            plotn = plot_debris_list[dbno]
+            t_n = debris_path.times[n]
+            z_n = debris_path.z_path[n]
+            info_n = debris_path.info_path[n]
 
-        t_n = debris_path.times[n]
-        z_n = debris_path.z_path[n]
-        info_n = debris_path.info_path[n]
-
-        # update plot of debris:
-        xc,yc = debris.get_corners(z_n, close_poly=True)
-        plotn.set_data(yc,xc)
-        plotn.set_color(c[info_n['friction']])
+            # update plot of debris:
+            xc,yc = debris.get_corners(z_n, close_poly=True)
+            plotn.set_data(yc,xc)
+            plotn.set_color(c[info_n['friction']])
 
 
         # color image:
@@ -268,104 +298,70 @@ if 1:
         title_text.set_text('%s at t = %s' % (imqoi,t_str))
 
 
-    if 0:
-        # plot center of mass path  OLD
-        xcm = zeros(times.shape)
-        ycm = zeros(times.shape)
-        ndebris = 4
-        for dbno in dbnosA:
-            if dbno > 90:
-                continue
-            xdb = zeros(times.shape)
-            ydb = zeros(times.shape)
-            for corner in range(0,4):
-                dbnoc = dbno + corner*1000
-                xdb += debris_paths[dbnoc][:,1]
-                ydb += debris_paths[dbnoc][:,2]
-            xdb = xdb/4.
-            ydb = ydb/4.
-            xcm += minimum(xdb,43.75)
-            ycm += ydb
-            #import pdb; pdb.set_trace()
-            ax.plot(ydb,xdb,'--',color='g',linewidth=0.5)
 
-            dbxyt = vstack((times,xdb,ydb)).T
-            fname = 'db%sxyt.txt' % str(dbno).zfill(2)
-            savetxt(fname,dbxyt)
-            print('Created ',fname)
+def plot_centroids(debris_path_list):
+    # need to fix for multiple debris
+    for debris_path in debris_path_list[:1]:
+        centroids_x = array([xc.mean() for xc in debris_path.x_path])
+        centroids_y = array([yc.mean() for yc in debris_path.y_path])
+        centroids_u = array([uc.mean() for uc in debris_path.u_path])
+        centroids_v = array([vc.mean() for vc in debris_path.v_path])
+        times = debris_path.times
 
-        xcm = xcm/ndebris
-        ycm = ycm/ndebris
-        ax.plot(ycm,xcm,'-',color='r',linewidth=0.5)
+        if use_sim_data:
+            fluid_label = 'provided flowfield'
+        else:
+            fluid_label = 'GeoClaw SWE flowfield'
 
-        cmxyt = vstack((times,xcm,ycm)).T
-        fname = 'cmxyt.txt'
-        savetxt(fname,cmxyt)
+        d = loadtxt('/Users/rjl/git/tsunami_benchmarks/nthmp_debris_2023/BM1/Benchmark_1/comparison_data/paths_and_velocities/config1_vel.txt')
+        figure(201,figsize=(8,8)); clf()
+        xlimits = (30,55)
+
+        subplot(311)
+        plot(times,centroids_x,'b',label='GeoClaw tracking with %s' % fluid_label)
+        plot(d[:,0], d[:,1], 'c', label='provided comparison data')
+        legend(loc='lower right', framealpha=1)
+        grid(True)
+        title('x-position')
+        ylabel('x (m)')
+        xlim(xlimits)
+
+        subplot(312)
+        plot(times,centroids_u,'b',label='GeoClaw tracking with %s' % fluid_label)
+        plot(d[:,0], d[:,3], 'c', label='provided comparison data')
+        legend(loc='upper right', framealpha=1)
+        grid(True)
+        title('cross-shore velocity')
+        ylabel('u velocity (m/s)')
+        xlim(xlimits)
+
+        subplot(313)
+        centroids_h = h_fcn(centroids_x, centroids_y, times)
+        plot(times,100*centroids_h,'r',label=fluid_label)
+        legend(loc='upper right', framealpha=1)
+        grid(True)
+        title('water depth')
+        ylabel('water depth (cm)')
+        xlim(xlimits)
+
+        xlabel('time (sec)')
+
+        tight_layout()
+        fname = 'centroids_xu.png'
+        savefig(fname, bbox_inches='tight')
         print('Created ',fname)
 
-
-
-def plot_centroids(debris_path):
-    centroids_x = array([xc.mean() for xc in debris_path.x_path])
-    centroids_y = array([yc.mean() for yc in debris_path.y_path])
-    centroids_u = array([uc.mean() for uc in debris_path.u_path])
-    centroids_v = array([vc.mean() for vc in debris_path.v_path])
-    times = debris_path.times
-
-    if use_sim_data:
-        fluid_label = 'provided flowfield'
-    else:
-        fluid_label = 'GeoClaw SWE flowfield'
-
-    d = loadtxt('/Users/rjl/git/tsunami_benchmarks/nthmp_debris_2023/BM1/Benchmark_1/comparison_data/paths_and_velocities/config1_vel.txt')
-    figure(201,figsize=(8,8)); clf()
-    xlimits = (30,55)
-
-    subplot(311)
-    plot(times,centroids_x,'b',label='GeoClaw tracking with %s' % fluid_label)
-    plot(d[:,0], d[:,1], 'c', label='provided comparison data')
-    legend(loc='lower right', framealpha=1)
-    grid(True)
-    title('x-position')
-    ylabel('x (m)')
-    xlim(xlimits)
-
-    subplot(312)
-    plot(times,centroids_u,'b',label='GeoClaw tracking with %s' % fluid_label)
-    plot(d[:,0], d[:,3], 'c', label='provided comparison data')
-    legend(loc='upper right', framealpha=1)
-    grid(True)
-    title('cross-shore velocity')
-    ylabel('u velocity (m/s)')
-    xlim(xlimits)
-
-    subplot(313)
-    centroids_h = h_fcn(centroids_x, centroids_y, times)
-    plot(times,100*centroids_h,'r',label=fluid_label)
-    legend(loc='upper right', framealpha=1)
-    grid(True)
-    title('water depth')
-    ylabel('water depth (cm)')
-    xlim(xlimits)
-
-    xlabel('time (sec)')
-
-    tight_layout()
-    fname = 'centroids_xu.png'
-    savefig(fname, bbox_inches='tight')
-    print('Created ',fname)
-
-    figure(202, figsize=(5,7)); clf()
-    plot(centroids_y, centroids_x, 'b-')
-    plot(centroids_y[::3], centroids_x[::3], 'b.', markersize=3)
-    axis([-1,1,44,34])
-    title('Centroid location for config 1')
-    xlabel('y (m)')
-    ylabel('x (m)')
-    grid(True)
-    fname = 'centroids_yx.png'
-    savefig(fname, bbox_inches='tight')
-    print('Created ',fname)
+        figure(202, figsize=(5,7)); clf()
+        plot(centroids_y, centroids_x, 'b-')
+        plot(centroids_y[::3], centroids_x[::3], 'b.', markersize=3)
+        axis([-1,1,44,34])
+        title('Centroid location for config 1')
+        xlabel('y (m)')
+        ylabel('x (m)')
+        grid(True)
+        fname = 'centroids_yx.png'
+        savefig(fname, bbox_inches='tight')
+        print('Created ',fname)
 
     return centroids_x, centroids_y, centroids_u, centroids_v, centroids_h
 
@@ -376,12 +372,12 @@ if __name__ == '__main__':
                                    frames=len(debris_path.times),
                                    interval=200, blit=False)
 
-    fname_mp4 = 'config1a.mp4'
+    fname_mp4 = 'polygon_test.mp4'
     fps = 5
     print('Making mp4...')
     animation_tools.make_mp4(anim, fname_mp4, fps)
 
-    centroids = plot_centroids(debris_path)
+    centroids = plot_centroids(debris_path_list)
 
     if use_sim_data:
         print('USING SIM DATA')

@@ -291,194 +291,218 @@ def make_debris_path(debris,z0,t0,dt,nsteps,h_fcn,u_fcn,v_fcn,verbose=False):
 
     return debris_path
 
+def make_debris_path_list(debris_list, obst_list, z0_list,
+                          t0,dt,nsteps, h_fcn,u_fcn,v_fcn, verbose=False):
 
-def make_corner_paths_accel(debris,h,u,v,t0,dt,nsteps,verbose=False):
-    """
-    make a list of lists, one for each time t0, t0+dt, ... t0 + nsteps*dt
-    """
+    debris_path_list = []
+    for dbno in range(len(debris_list)):
+        debris = debris_list[dbno]
+        z0 = z0_list[dbno]
+        # initial corner locations:
+        xc,yc = debris.get_corners(z0)
+        ncorners = len(xc)
 
-    # initial corner locations:
-    xc,yc = debris.get_corners(debris.z0)
-    ncorners = len(xc)
+        # initial velocities assumed to be zero:
+        uc = zeros(ncorners)
+        vc = zeros(ncorners)
 
-    # initial velocities:
-    uc = zeros(ncorners)
-    vc = zeros(ncorners)
+        times = arange(t0, t0+(nsteps+0.5)*dt, dt)
+        debris_path = DebrisPath(debris, times, z0)
 
-    info = {'friction': 'static'}  # since not moving at t0
-    corner_paths = [[t0, vstack([xc,yc,uc,vc]).T, info]]
-    z_np1 = debris.z0
+        info0 = {'friction': 'static'}  # since not moving at t0
+        debris_path.info_path = [info0]  # will append new dict at each time
+        debris_path_list.append(debris_path)
+
 
     for n in range(nsteps):
-        xc_hat = []
-        yc_hat = []
-        #uc_np1 = []
-        #vc_np1 = []
-        uc_np1 = zeros(ncorners)  # may get modified below
-        vc_np1 = zeros(ncorners)
-        t_n,corners_n,info_n = corner_paths[-1] # from previous time step
-        t_np1 = t_n + dt
-        #info_np1 = info_n.copy()
 
-        # move corners based on velocities uc_n, vc_n computed at end of last
-        # step, but call these xc_hat, yc_hat since they don't maintain rigid
-        # body constraint yet:
-        for k in range(ncorners):
-            xk_n, yk_n, uk_n, vk_n = corners_n[k,:]  # unpack k'th row
-            xc_hat.append(xk_n + dt*uk_n)
-            yc_hat.append(yk_n + dt*vk_n)
+        z_guess_list = []
+        xc_hat_list = []
+        yc_hat_list = []
 
-        # remap to original shape, maintaining rigidity:
-        xc_np1, yc_np1, theta_np1 = remap(xc_hat, yc_hat, z_np1,
-                                          debris.get_corners)
-        # corresponding z vector for new position:
-        z_np1 = (xc_np1[0], yc_np1[0], theta_np1)
+        for dbno in range(len(debris_list)):
+            debris = debris_list[dbno]
+            debris_path = debris_path_list[dbno]
 
-        # compute new velocity at n+1 after remapping:
+            # compute provisional  xc_hat, yc_hat
+            t_n = times[n]
+            xc_n = debris_path.x_path[n,:]  # location at t_n
+            yc_n = debris_path.y_path[n,:]
+            uc_n = debris_path.u_path[n,:]  # velocity at t_n based on (delta x)/dt
+            vc_n = debris_path.v_path[n,:]
 
-        # average fluid depth:
+            # compute new (provisional) velocities uc_hat, vc_hat based on forces
+            # of fluid and friction. (May take xc,yc to points violating rigidity)
 
-        hc_np1 = array([h(x,y,t_np1) for x,y in zip(xc_np1,yc_np1)])
-        h_ave = hc_np1.mean()
+            # average fluid depth:
 
-        friction = 'no'
-        if h_ave < debris.draft:
-            if (abs(corners_n[:,2]).max() + abs(corners_n[:,3]).max()) < 1e-3:
-                # corner velocities at t_n were all zero, check static friction:
-                friction = 'static'
-            else:
-                friction = 'kinetic'
+            hc_n = array([h_fcn(x,y,t_n) for x,y in zip(xc_n,yc_n)])
+            h_ave = hc_n.mean()
 
-        if friction == 'static' and debris.friction_static == 0.:
             friction = 'no'
-        if friction == 'kinetic' and debris.friction_kinetic == 0.:
-            friction = 'no'
-        if verbose:
-            print('%s friction at t = %.2f with h_ave = %.1f' \
-                % (friction,t_np1,h_ave))
-
-        info_np1 = {'friction': friction}  # pass back for plotting purposes
-
-        #print('At t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
-        wet_face_height = min(h_ave, debris.draft)
-        face_area = debris.face_width * wet_face_height
-
-        # split up area and mass between corners so each can be
-        # accelerated separately
-        corner_face_area = face_area / ncorners
-        corner_bottom_area = debris.bottom_area / ncorners
-        corner_mass = debris.mass / ncorners
-
-        #import pdb; pdb.set_trace()
-
-        for k in range(ncorners):
-
-            xk_np1 = xc_np1[k]
-            yk_np1 = yc_np1[k]
-
-            # need uk_n, vk_n to update using accel, values from previous step:
-            xk_n, yk_n, uk_n, vk_n = corners_n[k,:]
-            # recompute based on actual distance moved, after remapping:
-            uk_n = (xk_np1 - xk_n)/dt
-            vk_n = (yk_np1 - yk_n)/dt
-
-            # fluid velocities at this corner:
-            uk_f = u(xk_np1, yk_np1, t_np1)
-            vk_f = v(xk_np1, yk_np1, t_np1)
-
-            #print('+++ k = %i, uk_fluid = %.3f  vk_fluid = %.3f' % (k,uk_fluid,vk_fluid))
-
-            if isnan(uk_f):
-                print('*** uk_f is nan at ', xk_np1, yk_np1, t_np1)
-                import pdb; pdb.set_trace()
-
-            if debris.advect:
-                if friction == 'no':
-                    # to advect with flow, corner velocity = fluid velocity:
-                    uk_np1 = uk_f
-                    vk_np1 = vk_f
+            if h_ave < debris.draft:
+                if abs(uc_n).max() + abs(vc_n).max() < 1e-3:
+                    # corner velocities at t_n were all zero, check static friction:
+                    friction = 'static'
                 else:
-                    # grounded:
-                    uk_np1 = 0.
-                    vk_np1 = 0.
-            else:
-                # compute forces and acceleration for this corner:
+                    friction = 'kinetic'
 
-                # force Ffluid exerted by fluid based on velocity difference:
-                du = uk_f - uk_n
-                dv = vk_f - vk_n
-                sk_f = sqrt(du**2 + dv**2)
-                Ffluid_x = 0.5 * debris.rho_water * sk_f * du * corner_face_area
-                Ffluid_y = 0.5 * debris.rho_water * sk_f * dv * corner_face_area
-                #Ffluid_x = 0.
-                #Ffluid_y = 0.
-                Ffluid = sqrt(Ffluid_x**2 + Ffluid_y**2)
+            if friction == 'static' and debris.friction_static == 0.:
+                friction = 'no'
+            if friction == 'kinetic' and debris.friction_kinetic == 0.:
+                friction = 'no'
+            if verbose:
+                print('%s friction at t = %.2f with h_ave = %.1f' \
+                    % (friction,t_n,h_ave))
 
-                if friction != 'no':
-                    Ffriction1 = debris.grav * corner_bottom_area \
-                                * (debris.rho * debris.height - \
-                                   debris.rho_water * h_ave)
-                    if friction == 'static':
-                        Ffriction = debris.friction_static * Ffriction1
-                        Fnet = max(0., Ffluid - Ffriction)
-                        # now rescale (Ffluid_x, Ffluid_y) vector
-                        # to have length Fnet (net force after static friction)
-                        if abs(Ffluid) < 0.01:
-                            Fnet_x = Fnet_y = 0.
-                        else:
-                            Fnet_x = Ffluid_x * Fnet / Ffluid
-                            Fnet_y = Ffluid_y * Fnet / Ffluid
-                        print('+++s at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
-                             % (t_n, k, Ffluid, Ffriction, Fnet_x))
-                    elif friction == 'kinetic':
-                        Ffriction = debris.friction_kinetic * Ffriction1
-                        sk_n = sqrt(uk_n**2 + vk_n**2)
-                        #Fnet_x = Ffluid_x - Ffriction * uk_n / sk_n
-                        #Fnet_y = Ffluid_y - Ffriction * vk_n / sk_n
+            info_np1 = {'friction': friction}  # pass back for plotting purposes
+            debris_path.info_path.append(info_np1)
 
+
+            #print('At t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
+            wet_face_height = min(h_ave, debris.draft)
+            face_area = debris.face_width * wet_face_height
+
+            # split up area and mass between corners so each can be
+            # accelerated separately
+            corner_face_area = face_area / ncorners
+            corner_bottom_area = debris.bottom_area / ncorners
+            corner_mass = debris.mass / ncorners
+
+            #import pdb; pdb.set_trace()
+
+            # initialize uc_hat,vc_hat vectors
+            uc_hat = zeros(ncorners)
+            vc_hat = zeros(ncorners)
+
+            for k in range(ncorners):
+                # loop over corners, setting uc_hat, vc_hat at each corner
+                # based on fluid velocity and forces at that corner:
+
+                xk_n = xc_n[k]
+                yk_n = yc_n[k]
+                uk_n = uc_n[k]
+                vk_n = vc_n[k]
+
+                # fluid velocities at this corner:
+                uk_fluid = u_fcn(xk_n, yk_n, t_n)
+                vk_fluid = v_fcn(xk_n, yk_n, t_n)
+
+                #print('+++ k = %i, uk_f = %.3f  vk_f = %.3f' % (k,uk_f,vk_f))
+                if isnan(uk_fluid):
+                    print('*** uk_fluid is nan at ', xk_n, yk_n, t_n)
+                    import pdb; pdb.set_trace()
+
+                if debris.advect:
+                    if friction == 'no':
+                        # to advect with flow, corner velocity = fluid velocity:
+                        uk_hat = uk_fluid
+                        vk_hat = vk_fluid
+                    else:
+                        # grounded:
+                        uk_hat = 0.
+                        vk_hat = 0.
+                else:
+                    # compute forces and acceleration for this corner:
+
+                    # force Ffluid exerted by fluid based on velocity difference:
+                    du = uk_fluid - uk_n
+                    dv = vk_fluid - vk_n
+                    sk_f = sqrt(du**2 + dv**2)
+                    Ffluid_x = 0.5 * debris.rho_water * sk_f * du * corner_face_area
+                    Ffluid_y = 0.5 * debris.rho_water * sk_f * dv * corner_face_area
+                    #Ffluid_x = 0.
+                    #Ffluid_y = 0.
+                    Ffluid = sqrt(Ffluid_x**2 + Ffluid_y**2)
+
+                    if friction != 'no':
+                        Ffriction1 = debris.grav * corner_bottom_area \
+                                    * (debris.rho * debris.height - \
+                                       debris.rho_water * h_ave)
+                        if friction == 'static':
+                            Ffriction = debris.friction_static * Ffriction1
+                            Fnet = max(0., Ffluid - Ffriction)
+                            # now rescale (Ffluid_x, Ffluid_y) vector
+                            # to have length Fnet (net force after static friction)
+                            if abs(Ffluid) < 0.01:
+                                Fnet_x = Fnet_y = 0.
+                            else:
+                                Fnet_x = Ffluid_x * Fnet / Ffluid
+                                Fnet_y = Ffluid_y * Fnet / Ffluid
+                            print('+++s at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
+                                 % (t_n, k, Ffluid, Ffriction, Fnet_x))
+                        elif friction == 'kinetic':
+                            Ffriction = debris.friction_kinetic * Ffriction1
+                            sk_n = sqrt(uk_n**2 + vk_n**2)
+                            #Fnet_x = Ffluid_x - Ffriction * uk_n / sk_n
+                            #Fnet_y = Ffluid_y - Ffriction * vk_n / sk_n
+
+                            Fnet_x = Ffluid_x
+                            Fnet_y = Ffluid_y
+                            print('+++k at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
+                                 % (t_n, k, Ffluid, Ffriction, Fnet_x))
+
+                        if verbose:
+                            print('k = %i, Ffluid = %.3f, Ffriction = %.3f' \
+                                % (k,Ffluid,Ffriction))
+
+                    else:
+                        # not in contact with bottom, only fluid force:
                         Fnet_x = Ffluid_x
                         Fnet_y = Ffluid_y
-                        print('+++k at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
-                             % (t_n, k, Ffluid, Ffriction, Fnet_x))
+
+                    uk_hat = uk_n + dt*Fnet_x / corner_mass
+                    vk_hat = vk_n + dt*Fnet_y / corner_mass
+
+                    if friction == 'kinetic':
+                         decay = exp(-Ffriction / sk_n  * dt/corner_mass)
+                         uk_hat *= decay
+                         vk_hat *= decay
 
                     if verbose:
-                        print('k = %i, Ffluid = %.3f, Ffriction = %.3f' \
-                            % (k,Ffluid,Ffriction))
+                        print('k = %i, Fnet_x = %.3f, Fnet_y = %.3f' \
+                            % (k,Fnet_x,Fnet_y))
 
-                else:
-                    # not in contact with bottom, only fluid force:
-                    Fnet_x = Ffluid_x
-                    Fnet_y = Ffluid_y
+                uc_hat[k] = uk_hat
+                vc_hat[k] = vk_hat
 
-                uk_np1 = uk_n + dt*Fnet_x / corner_mass
-                vk_np1 = vk_n + dt*Fnet_y / corner_mass
+            # move corners based on this provisional velocity:
+            xc_hat = xc_n + dt*uc_hat
+            yc_hat = yc_n + dt*vc_hat
 
-                if friction == 'kinetic':
-                     decay = exp(- Ffriction / sk_n  * dt/corner_mass)
-                     uk_np1 *= decay
-                     vk_np1 *= decay
+            xc_hat_list.append(xc_hat)
+            yc_hat_list.append(yc_hat)
+            z_guess_list.append(debris_path.z_path[n])
 
-                if verbose:
-                    print('k = %i, Fnet_x = %.3f, Fnet_y = %.3f' \
-                        % (k,Fnet_x,Fnet_y))
 
-            uc_np1[k] = uk_np1
-            vc_np1[k] = vk_np1
+        # remap to original shape, maintaining rigidity and
+        # avoiding collisions:
+        xc_list, yc_list, z_list = remap_avoid(xc_hat_list, yc_hat_list,
+                                          debris_list, obst_list, z_guess_list)
 
-        # check for bouncing off back wall -- NEED TO IMPROVE
-        xwall2 = 43.75
+        for dbno in range(len(debris_list)):
+            debris = debris_list[dbno]
+            debris_path = debris_path_list[dbno]
+            xc_n = debris_path.x_path[n,:]  # location at t_n
+            yc_n = debris_path.y_path[n,:]
+            xc_np1 = xc_list[dbno]  # new location from remap
+            yc_np1 = yc_list[dbno]
+            z_np1 = z_list[dbno]
+            # use actual distance moved to recompute velocities over last step:
+            uc_np1 = (xc_np1 - xc_n) / dt
+            vc_np1 = (yc_np1 - yc_n) / dt
 
-        dx_wall = max(xc_np1) - xwall2
-        if dx_wall > 0:
-            xc_np1 = [x - dx_wall for x in xc_np1]
-            uc_np1 = [-0.5*u for u in uc_np1]
-            print('+++ negated uc at wall')
-            #uc_np1 = [0. for u in uc_np1]
+            # check for bouncing off back wall -- USE OBSTACLE
 
-        corners_np1 = vstack([xc_np1,yc_np1,uc_np1,vc_np1]).T
-        corner_paths.append([t_np1, corners_np1, info_np1])
+            debris_path.x_path[n+1,:] = xc_np1
+            debris_path.y_path[n+1,:] = yc_np1
+            debris_path.u_path[n+1,:] = uc_np1
+            debris_path.v_path[n+1,:] = vc_np1
+            debris_path.z_path[n+1,:] = z_np1
 
-    return corner_paths
+    return debris_path_list
+
+
 
 
 def remap(xc_hat, yc_hat, z_guess, get_corners):
@@ -504,37 +528,104 @@ def remap(xc_hat, yc_hat, z_guess, get_corners):
             f[2*i] = xc[i] - xc_hat[i]
             f[2*i+1] = yc[i] - yc_hat[i]
 
-        if 0:
-            # add distance from an obstacle as test:
-            xcentroid = xc.mean()
-            ycentroid = yc.mean()
-            fdist = sqrt((xcentroid - 37.)**2 + (ycentroid - 1.)**2)
-            f = hstack((f, max(1.4 - fdist, 0.)))
-
-        # area of intersection with obstacle:
-        #obst_x = array([37,38,38,37])
-        #obst_y = array([0.5,0.5,1.5,1.5])
-
-        # stationary block:
-        x1b = 35.54 - 0.6
-        x2b = 36.14 - 0.6
-        y1b = 1.22 - 0.6
-        y2b = 1.82 - 0.6
-        obst_x = array([x1b,x1b,x2b,x2b])
-        obst_y = array([y1b,y2b,y2b,y1b])
-
-        obst_p = vstack((obst_x,obst_y)).T
-        obst_polygon = Polygon(obst_p)
-        debris_polygon = Polygon(vstack((xc,yc)).T)
-        overlap_area = obst_polygon.intersection(debris_polygon).area
-        f = hstack((f, 100*overlap_area))
-
         return f
+
+    #print('+++ xc_hat: ',xc_hat)
+    #print('+++ z_guess: ',z_guess)
+    #print('+++ F: ',F(z_guess))
 
     result = least_squares(F,z_guess)
     xc,yc = get_corners(result['x'])
     theta = result['x'][2]
+    #print('+++ remap result: ',result)
     return xc,yc,theta
+
+
+def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
+    """
+    Adjust xc_hat, yc_hat to xc,yc so that original shape is preserved.
+    z_guess is initial guess for z defining xc,yc.
+
+    Avoid collisions.
+    """
+
+    from scipy.optimize import least_squares
+
+    z_guess_all = z_guess_list[0]
+    for dbno in range(1, len(z_guess_list)):
+        z_guess_all = z_guess_all + z_guess_list[dbno]
+
+    def F(z_all, *args, **kwargs):
+        """
+        Objective function for least squares fitting
+        """
+        from shapely import Polygon
+
+        f_total = array([], dtype=float)
+
+        for dbno in range(len(debris_list)):
+            debris = debris_list[dbno]
+            z = z_all[3*dbno:3*dbno+3]
+            xc_hat = xc_hat_list[dbno]
+            yc_hat = yc_hat_list[dbno]
+
+            # compute current guess at corners from z:
+            xc,yc = debris.get_corners(z)
+
+            # compute residuals between current corners and target:
+            f = zeros(2*len(xc))
+            for i in range(len(xc)):
+                f[2*i] = xc[i] - xc_hat[i]
+                f[2*i+1] = yc[i] - yc_hat[i]
+
+            f_total = hstack((f_total, f))
+
+            # debris-obstacle collisions:
+
+            debris_polygon = Polygon(vstack((xc,yc)).T)
+
+            for obno in range(len(obst_list)):
+                obst_polygon = obst_list[obno]
+                overlap_area = obst_polygon.intersection(debris_polygon).area
+                f_total = hstack((f_total, 100*overlap_area))
+
+            # debris-debris collisions:
+
+            for dbno2 in range(dbno+1,len(debris_list)):
+                debris2 = debris_list[dbno2]
+                z2 = z_guess_list[dbno2]
+                xc2,yc2 = debris.get_corners(z2)
+                debris2_polygon = Polygon(vstack((xc2,yc2)).T)
+                overlap_area = debris2_polygon.intersection(debris_polygon).area
+                f_total = hstack((f_total, 100*overlap_area))
+                #print('+++ dbno = %i, dbno2 = %i' % (dbno,dbno2))
+
+        return f_total
+
+    z_guess_all = z_guess_list[0]
+    for dbno in range(1,len(z_guess_list)):
+        z_guess_all = z_guess_all + z_guess_list[dbno]
+
+    #print('+++ xc_hat_list: ',xc_hat_list)
+    #print('+++ z_guess_all: ',z_guess_all)
+    #print('+++ F: ',F(z_guess_all))
+
+    result = least_squares(F,z_guess_all)
+    #print('+++ remap_avoid result: ',result)
+
+    z_all = result['x']
+    xc_list = []
+    yc_list = []
+    theta_list = []
+    z_list = []
+    for dbno in range(len(debris_list)):
+        z = z_all[3*dbno:3*dbno+3]
+        z_list.append(z)
+        xc,yc = debris_list[dbno].get_corners(z)
+        xc_list.append(xc)
+        yc_list.append(yc)
+        theta_list.append(z_all[3*dbno+2])
+    return xc_list,yc_list,z_list
 
 
 # ==========================================
@@ -568,6 +659,54 @@ def test_debris_path():
     debris_path = make_debris_path(debris,z0,t0,dt,nsteps,h,u,v)
 
     figure(1);clf();
+    for n in range(nsteps+1):
+        t_n = debris_path.times[n]
+        z_n = debris_path.z_path[n]
+        xc,yc = debris.get_corners(z_n, close_poly=True)
+        plot(xc, yc, label='t = %.1f' % t_n)
+        #if mod(k,5) == 0:
+        if 0:
+            text(debris_path.x_path[k].mean(),
+                 debris_path.y_path[k].mean()+1, 't = %.1f' % t_n,
+                 color='b',fontsize=8)
+
+    #legend()
+    axis('equal')
+    grid(True)
+
+    return debris_path
+
+def test_debris_path_list():
+
+    debris = DebrisObject()
+    debris.L = [1,1,1]
+    debris.phi = [pi/2, pi/2, pi/2]
+    #debris.z0 = [3,1,pi/4]
+
+    debris.advect = True
+    debris.rho = 900.
+
+    u,v = velocities_shear()
+    #h = lambda x,y,t: max(0., 0.2*(30.-t))  # fluid depth
+    #h = lambda x,y,t: where(t<30, 0.5*(1 - cos(2*pi*t/15.)), 0.)
+    h = lambda x,y,t: 10.
+
+    t0 = 0.
+    nsteps = 10
+    dt = 0.5
+    #z0 = [0,-0.5,0]
+    z0 = [0,0.5,0]
+
+    debris_list = [debris]
+    obst_list = []
+    z0_list = [z0]
+
+    debris_path_list = make_debris_path_list(debris_list, obst_list, z0_list,
+                                            t0,dt,nsteps,h,u,v)
+
+    debris_path = debris_path_list[0]
+
+    figure(2);clf();
     for n in range(nsteps+1):
         t_n = debris_path.times[n]
         z_n = debris_path.z_path[n]
