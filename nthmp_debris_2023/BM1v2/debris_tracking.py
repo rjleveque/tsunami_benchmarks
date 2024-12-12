@@ -260,16 +260,10 @@ def make_debris_path(debris,z0,t0,dt,nsteps,h_fcn,u_fcn,v_fcn,verbose=False):
         xc_hat = xc_n + dt*uc_hat
         yc_hat = yc_n + dt*vc_hat
 
-        print('+++ xc_n = %s\n yc_n = %s' % (repr(xc_n),repr(yc_n)))
-
-        print('+++ xc_hat = %s\n yc_hat = %s' % (repr(xc_hat),repr(yc_hat)))
-
         # remap to original shape, maintaining rigidity:
         z_guess = debris_path.z_path[n]  # from previous step
         xc_np1, yc_np1, theta_np1 = remap(xc_hat, yc_hat, z_guess,
                                           debris.get_corners)
-
-        print('+++ xc_np1 = %s\n yc_np1 = %s' % (repr(xc_np1),repr(yc_np1)))
 
         # use actual distance moved to recompute velocities over last step:
         uc_np1 = (xc_np1 - xc_n) / dt
@@ -499,6 +493,7 @@ def remap(xc_hat, yc_hat, z_guess, get_corners):
         """
         Objective function for least squares fitting
         """
+        from shapely import Polygon
 
         # compute current guess at corners from z:
         xc,yc = get_corners(z)
@@ -508,6 +503,32 @@ def remap(xc_hat, yc_hat, z_guess, get_corners):
         for i in range(len(xc)):
             f[2*i] = xc[i] - xc_hat[i]
             f[2*i+1] = yc[i] - yc_hat[i]
+
+        if 0:
+            # add distance from an obstacle as test:
+            xcentroid = xc.mean()
+            ycentroid = yc.mean()
+            fdist = sqrt((xcentroid - 37.)**2 + (ycentroid - 1.)**2)
+            f = hstack((f, max(1.4 - fdist, 0.)))
+
+        # area of intersection with obstacle:
+        #obst_x = array([37,38,38,37])
+        #obst_y = array([0.5,0.5,1.5,1.5])
+
+        # stationary block:
+        x1b = 35.54 - 0.6
+        x2b = 36.14 - 0.6
+        y1b = 1.22 - 0.6
+        y2b = 1.82 - 0.6
+        obst_x = array([x1b,x1b,x2b,x2b])
+        obst_y = array([y1b,y2b,y2b,y1b])
+
+        obst_p = vstack((obst_x,obst_y)).T
+        obst_polygon = Polygon(obst_p)
+        debris_polygon = Polygon(vstack((xc,yc)).T)
+        overlap_area = obst_polygon.intersection(debris_polygon).area
+        f = hstack((f, 100*overlap_area))
+
         return f
 
     result = least_squares(F,z_guess)

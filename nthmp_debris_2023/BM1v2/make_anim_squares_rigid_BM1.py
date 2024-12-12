@@ -230,6 +230,24 @@ if 1:
     xc,yc = debris.get_corners(z_n, close_poly=True)
     plotn, = plot(yc, xc, color=c[info_n['friction']], lw=3)
 
+    if 0:
+        # plot obstacle circle:
+        xobs = 37. + cos(linspace(0,2*pi,100))
+        yobs = 1. + sin(linspace(0,2*pi,100))
+        plot(yobs,xobs, 'c')
+
+    # plot obstacle square:
+    #obst_x = array([37,38,38,37,37])
+    #obst_y = array([0.5,0.5,1.5,1.5,0.5])
+    # stationary block:
+    x1b = 35.54 -0.6
+    x2b = 36.14 -0.6
+    y1b = 1.22 -0.6
+    y2b = 1.82 -0.6
+    obst_x = array([x1b,x1b,x2b,x2b,x1b])
+    obst_y = array([y1b,y2b,y2b,y1b,y1b])
+    plot(obst_y, obst_x, 'c')
+
     def update(n):
 
         if 0:
