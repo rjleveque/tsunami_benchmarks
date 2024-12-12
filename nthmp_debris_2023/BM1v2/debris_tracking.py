@@ -604,7 +604,7 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
 
     z_guess_all = z_guess_list[0]
     for dbno in range(1,len(z_guess_list)):
-        z_guess_all = z_guess_all + z_guess_list[dbno]
+        z_guess_all = hstack((z_guess_all, z_guess_list[dbno]))
 
     #print('+++ xc_hat_list: ',xc_hat_list)
     #print('+++ z_guess_all: ',z_guess_all)
