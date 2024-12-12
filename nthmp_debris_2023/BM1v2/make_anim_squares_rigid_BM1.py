@@ -27,8 +27,8 @@ if not use_sim_data:
 
     from load_fgout import fgout_grid, h_fcn, u_fcn, v_fcn, fgout_times, \
                            fgout_h_txy, fgout_u_txy, fgout_v_txy
-    fgout_grid_extent = fgout_grid.extent_edges    
-               
+    fgout_grid_extent = fgout_grid.extent_edges
+
 else:
     # not working: u_vel_fcn((34.1, 34.34)) is nan
     # use provided sim data instead of GeoClaw fgout results:
@@ -43,9 +43,9 @@ else:
         u_vel = u_vel_fcn(tx)
         u = where(isnan(u_vel), 0., u_vel)
         return u
-        
+
     v_fcn = lambda x,y,t: 0.
-        
+
     # piecewise linear bottom:
     #xB = array([0,10,17.5,32,43.75])
     #yB = array([0,0,0.5,1,1]) - 0.9017
@@ -57,19 +57,19 @@ else:
         B = where(x<32, B, 1)
         B = B - 0.9017
         return B
-        
+
     def h_fcn(x,y,t):
         tx = vstack((t,x)).T
         zeta = zeta_fcn(tx)
         h = where(isnan(zeta), 0., zeta - B(x))
         return h
-        
+
     fgout_times = array([0, 30., 60.])
     fgout_h_txy = zeros((3,400,60))
     fgout_u_txy = zeros((3,400,60))
     fgout_v_txy = zeros((3,400,60))
     fgout_grid_extent = [33.75, 43.75, -3.0, 3.0]
-    
+
 
 
 z0 = [34.34, 0.22, 0]  # determines initial debris location
@@ -83,7 +83,7 @@ if 0:
                                                    h_fcn,u_fcn,v_fcn,
                                                    t0,dt,nsteps,verbose=True)
     corner_paths_2 = None
-                                              
+
 debris_path = debris_tracking.make_debris_path(debris,z0,t0,dt,nsteps,
                                                h_fcn,u_fcn,v_fcn, verbose=True)
 
@@ -93,7 +93,7 @@ debris_path2 = None  # no comparison
 if 1:
     # ===========
     # plotting
-    
+
 
     bgimage = None
     #plot_extent = [34, 43.75, -3, 3]
@@ -127,10 +127,10 @@ if 1:
         #                [1,0,0,a]])
         cmap_depth = mpl.colors.ListedColormap([
                         [.8,.8,1,a],[.7,.7,1,a],[.6,.6,1,a],[.5,.5,1,a]])
-                        
+
         # Set color for value exceeding top of range:
         cmap_depth.set_over(color=[0.4,0.4,1,a])
-        
+
 
         if bgimage:
             # Set color to transparent where s < 1e-3:
@@ -144,15 +144,15 @@ if 1:
         bounds_depth = np.array([0.001,0.04,0.06,0.08,0.10])
 
         norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
-        
+
         fgout_h = fgout_h_txy[fgframeno,:,:]
         eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
-        
+
         im = imshow(flipud(eta_water), extent=fgout_extent,
                         #cmap=geoplot.tsunami_colormap)
                         cmap=cmap_depth, norm=norm_depth)
         im.set_clim(-5,5)
-                    
+
         cb = colorbar(im, extend='max', shrink=0.7)
         cb.set_label('meters')
         #contour(fgout.X, fgout.Y, fgout.B, [0], colors='g', linewidths=0.5)
@@ -162,10 +162,10 @@ if 1:
         xticks(rotation=20)
         ax.set_xlim(xlimits)
         ax.set_ylim(ylimits)
-        
+
         t_str = '%.2f seconds' % t0
         title_text = title('%s at t = %s' % (imqoi,t_str))
-        
+
     else:
         # speed
         s_units = 'm/s'
@@ -213,9 +213,9 @@ if 1:
         title_text = title('%s at t = %s' % (imqoi,t_str))
 
     # plot debris square:
-    
+
     c = {'no':'g', 'static':'r', 'kinetic':'orange'}
-    
+
     if 0:
         # old
         tk,cpk,info = corner_paths[0]
@@ -229,7 +229,7 @@ if 1:
     info_n = debris_path.info_path[0]
     xc,yc = debris.get_corners(z_n, close_poly=True)
     plotn, = plot(yc, xc, color=c[info_n['friction']], lw=3)
-    
+
     def update(n):
 
         if 0:
@@ -240,11 +240,11 @@ if 1:
                 tk,cpk2,info = corner_paths_2[k]
                 plotk_2.set_data(cpk2[:,1],cpk2[:,0])
                 plotk_2.set_color(c[info['friction']])
-                        
+
         t_n = debris_path.times[n]
         z_n = debris_path.z_path[n]
         info_n = debris_path.info_path[n]
-        
+
         # update plot of debris:
         xc,yc = debris.get_corners(z_n, close_poly=True)
         plotn.set_data(yc,xc)
@@ -254,7 +254,7 @@ if 1:
         # color image:
         # choose closes fgout frame for now...
         fgframeno = where(fgout_times <= t_n)[0].max()
-        
+
         if imqoi == 'Depth':
             fgout_h = fgout_h_txy[fgframeno,:,:]
             eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
@@ -263,10 +263,10 @@ if 1:
             fgout_s = sqrt(fgout_u_txy[fgframeno,:,:]**2 + \
                            fgout_v_txy[fgframeno,:,:]**2)
             im.set_data(flipud(fgout_s))
-            
+
         t_str = '%.2f seconds' % t_n
         title_text.set_text('%s at t = %s' % (imqoi,t_str))
-        
+
 
     if 0:
         # plot center of mass path  OLD
@@ -288,16 +288,16 @@ if 1:
             ycm += ydb
             #import pdb; pdb.set_trace()
             ax.plot(ydb,xdb,'--',color='g',linewidth=0.5)
-            
+
             dbxyt = vstack((times,xdb,ydb)).T
             fname = 'db%sxyt.txt' % str(dbno).zfill(2)
             savetxt(fname,dbxyt)
             print('Created ',fname)
-            
+
         xcm = xcm/ndebris
         ycm = ycm/ndebris
         ax.plot(ycm,xcm,'-',color='r',linewidth=0.5)
-        
+
         cmxyt = vstack((times,xcm,ycm)).T
         fname = 'cmxyt.txt'
         savetxt(fname,cmxyt)
@@ -311,16 +311,16 @@ def plot_centroids(debris_path):
     centroids_u = array([uc.mean() for uc in debris_path.u_path])
     centroids_v = array([vc.mean() for vc in debris_path.v_path])
     times = debris_path.times
-    
+
     if use_sim_data:
         fluid_label = 'provided flowfield'
     else:
         fluid_label = 'GeoClaw SWE flowfield'
-    
+
     d = loadtxt('/Users/rjl/git/tsunami_benchmarks/nthmp_debris_2023/BM1/Benchmark_1/comparison_data/paths_and_velocities/config1_vel.txt')
     figure(201,figsize=(8,8)); clf()
     xlimits = (30,55)
-    
+
     subplot(311)
     plot(times,centroids_x,'b',label='GeoClaw tracking with %s' % fluid_label)
     plot(d[:,0], d[:,1], 'c', label='provided comparison data')
@@ -329,7 +329,7 @@ def plot_centroids(debris_path):
     title('x-position')
     ylabel('x (m)')
     xlim(xlimits)
-    
+
     subplot(312)
     plot(times,centroids_u,'b',label='GeoClaw tracking with %s' % fluid_label)
     plot(d[:,0], d[:,3], 'c', label='provided comparison data')
@@ -347,14 +347,14 @@ def plot_centroids(debris_path):
     title('water depth')
     ylabel('water depth (cm)')
     xlim(xlimits)
-    
+
     xlabel('time (sec)')
 
     tight_layout()
     fname = 'centroids_xu.png'
     savefig(fname, bbox_inches='tight')
     print('Created ',fname)
-    
+
     figure(202, figsize=(5,7)); clf()
     plot(centroids_y, centroids_x, 'b-')
     plot(centroids_y[::3], centroids_x[::3], 'b.', markersize=3)
@@ -368,20 +368,20 @@ def plot_centroids(debris_path):
     print('Created ',fname)
 
     return centroids_x, centroids_y, centroids_u, centroids_v, centroids_h
-        
+
 if __name__ == '__main__':
-        
+
     print('Making anim...')
     anim = animation.FuncAnimation(fig, update,
-                                   frames=len(debris_path.times), 
+                                   frames=len(debris_path.times),
                                    interval=200, blit=False)
 
     fname_mp4 = 'config1a.mp4'
     fps = 5
     print('Making mp4...')
     animation_tools.make_mp4(anim, fname_mp4, fps)
-    
+
     centroids = plot_centroids(debris_path)
-    
+
     if use_sim_data:
         print('USING SIM DATA')
