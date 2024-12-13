@@ -111,7 +111,8 @@ def make_debris_path(debris,z0,t0,dt,nsteps,h_fcn,u_fcn,v_fcn,verbose=False):
     times = arange(t0, t0+(nsteps+0.5)*dt, dt)
     debris_path = DebrisPath(debris, times, z0)
 
-    info0 = {'friction': 'static'}  # since not moving at t0
+    #info0 = {'friction': 'static'}  # since not moving at t0
+    info0 = debris.info  # might include 'material' as well as 'friction'
     debris_path.info_path = [info0]  # will append new dict at each time
 
 
@@ -122,6 +123,7 @@ def make_debris_path(debris,z0,t0,dt,nsteps,h_fcn,u_fcn,v_fcn,verbose=False):
         yc_n = debris_path.y_path[n,:]
         uc_n = debris_path.u_path[n,:]  # velocity at t_n based on (delta x)/dt
         vc_n = debris_path.v_path[n,:]
+        info_n = debris_path.info_path[n]
 
         # compute new (provisional) velocities uc_hat, vc_hat based on forces
         # of fluid and friction. (May take xc,yc to points violating rigidity)
@@ -147,7 +149,8 @@ def make_debris_path(debris,z0,t0,dt,nsteps,h_fcn,u_fcn,v_fcn,verbose=False):
             print('%s friction at t = %.2f with h_ave = %.1f' \
                 % (friction,t_n,h_ave))
 
-        info_np1 = {'friction': friction}  # pass back for plotting purposes
+        info_np1 = info_n.copy()
+        info_np1['friction'] = friction # pass back for plotting purposes
 
         #print('At t = %.2f with h_ave = %.1f' % (t_np1,h_ave))
         wet_face_height = min(h_ave, debris.draft)
@@ -309,7 +312,8 @@ def make_debris_path_list(debris_list, obst_list, z0_list,
         times = arange(t0, t0+(nsteps+0.5)*dt, dt)
         debris_path = DebrisPath(debris, times, z0)
 
-        info0 = {'friction': 'static'}  # since not moving at t0
+        #info0 = {'friction': 'static'}  # since not moving at t0
+        info0 = debris.info  # might include 'material' as well as 'friction'
         debris_path.info_path = [info0]  # will append new dict at each time
         debris_path_list.append(debris_path)
 
@@ -330,6 +334,7 @@ def make_debris_path_list(debris_list, obst_list, z0_list,
             yc_n = debris_path.y_path[n,:]
             uc_n = debris_path.u_path[n,:]  # velocity at t_n based on (delta x)/dt
             vc_n = debris_path.v_path[n,:]
+            info_n = debris_path.info_path[n]
 
             # compute new (provisional) velocities uc_hat, vc_hat based on forces
             # of fluid and friction. (May take xc,yc to points violating rigidity)
@@ -355,7 +360,8 @@ def make_debris_path_list(debris_list, obst_list, z0_list,
                 print('%s friction at t = %.2f with h_ave = %.1f' \
                     % (friction,t_n,h_ave))
 
-            info_np1 = {'friction': friction}  # pass back for plotting purposes
+            info_np1 = info_n.copy()
+            info_np1['friction'] = friction # pass back for plotting purposes
             debris_path.info_path.append(info_np1)
 
 
