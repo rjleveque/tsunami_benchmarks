@@ -60,7 +60,6 @@ class DebrisObject():
         xc[0] = x0
         yc[0] = y0
         phitot = theta
-        #import pdb; pdb.set_trace()
         for k in range(len(self.L)):
             phitot = phitot + self.phi[k]
             xc[k+1] = xc[k] + self.L[k]*cos(phitot)
@@ -430,23 +429,26 @@ def make_debris_path_list(debris_list, obst_list, z0_list,
                             Fnet = max(0., Ffluid - Ffriction)
                             # now rescale (Ffluid_x, Ffluid_y) vector
                             # to have length Fnet (net force after static friction)
-                            if abs(Ffluid) < 0.01:
+                            if abs(Ffluid) < 0.001:
+                                # avoid divide by zero:
                                 Fnet_x = Fnet_y = 0.
                             else:
+                                # Fnet force acts in direction of fluid motion:
                                 Fnet_x = Ffluid_x * Fnet / Ffluid
                                 Fnet_y = Ffluid_y * Fnet / Ffluid
-                            print('+++s at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
-                                 % (t_n, k, Ffluid, Ffriction, Fnet_x))
+                            #print('+++s at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
+                            #     % (t_n, k, Ffluid, Ffriction, Fnet_x))
                         elif friction == 'kinetic':
                             Ffriction = debris.friction_kinetic * Ffriction1
-                            sk_n = sqrt(uk_n**2 + vk_n**2)
+                            sk_n = sqrt(uk_n**2 + vk_n**2)  # speed of corner
                             #Fnet_x = Ffluid_x - Ffriction * uk_n / sk_n
                             #Fnet_y = Ffluid_y - Ffriction * vk_n / sk_n
-
+                            # Do not attempt to apply this force with explicit
+                            # algorithm, instead handle below with exp decay
                             Fnet_x = Ffluid_x
                             Fnet_y = Ffluid_y
-                            print('+++k at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
-                                 % (t_n, k, Ffluid, Ffriction, Fnet_x))
+                            #print('+++k at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
+                            #     % (t_n, k, Ffluid, Ffriction, Fnet_x))
 
                         if verbose:
                             print('k = %i, Ffluid = %.3f, Ffriction = %.3f' \

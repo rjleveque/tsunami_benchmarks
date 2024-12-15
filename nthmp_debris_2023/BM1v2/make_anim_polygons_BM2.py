@@ -2,6 +2,7 @@ from pylab import *
 import matplotlib.animation as animation
 from matplotlib import colors
 import numpy as np
+from numpy import random
 from clawpack.visclaw import animation_tools, plottools, geoplot
 from clawpack.geoclaw import fgout_tools
 import debris_tracking
@@ -15,7 +16,7 @@ debris_wood.height = 0.051
 debris_wood.bottom_area = debris_wood.L[0]*debris_wood.L[1]  # assuming rectangle
 debris_wood.face_width = debris_wood.L[0]  # assuming square
 debris_wood.friction_static = 0.71  # wood
-debris_wood.friction_kinetic = 0.25
+debris_wood.friction_kinetic = 0.5 * debris_wood.friction_static
 debris_wood.advect = False
 debris_wood.rho = 648. # wood
 print('Draft of wood block = %.3fm' % debris_wood.draft)
@@ -23,8 +24,7 @@ debris_wood.info = {'material':'wood', 'friction':'static'}
 
 debris_hdpe = copy.deepcopy(debris_wood)
 debris_hdpe.friction_static = 0.38  # HDPE
-debris_hdpe.friction_static = 0.71  # wood
-debris_hdpe.friction_kinetic = 0.25
+debris_hdpe.friction_kinetic = 0.5 * debris_hdpe.friction_static
 debris_hdpe.rho = 987. # HDPE
 print('Draft of hdpe block = %.3fm' % debris_hdpe.draft)
 debris_hdpe.info = {'material':'hdpe', 'friction':'static'}
@@ -34,17 +34,52 @@ z0_list = []
 
 x1 = 31.29
 y1 = -2*0.153 - 0.051
+randomize = True
+
+nrows = 4
+n_per_row = 5
+
+if randomize:
+    rr = random.uniform(size=nrows*n_per_row*3)
+    fname = 'random.txt'
+    savetxt(fname, rr)
+    print('Created ',fname)
+
 blockno = 0
-for j in range(2):
-    for i in range(5):
+
+for j in range(nrows):
+    for i in range(n_per_row):
         if mod(blockno,2) == 0:
             debris = copy.deepcopy(debris_wood)
         else:
             debris = copy.deepcopy(debris_hdpe)
-        z0 = [x1 + j*0.153, y1 + i*0.153, 0]  # determines initial debris location
+
+        # initial debris location and angle:
+        x_ij = x1 + j*0.153
+        y_ij = y1 + i*0.153
+        theta_ij = 0.
+        if randomize:
+            x_ij = x_ij + .05*rr[3*blockno + 0]
+            y_ij = y_ij + .05*rr[3*blockno + 1]
+            theta_ij = rr[3*blockno + 2] * pi/2
+        z0 = [x_ij,y_ij,theta_ij]  # determines initial debris location
         z0_list.append(z0)
+        debris.z0 = z0
         debris_list.append(debris)
         blockno += 1
+
+if randomize:
+    obst_list = []
+    xc_hat_list = []
+    yc_hat_list = []
+    z_guess_list = z0_list
+    for debris in debris_list:
+        xc_hat, yc_hat = debris.get_corners(debris.z0)
+        xc_hat_list.append(xc_hat)
+        yc_hat_list.append(yc_hat)
+    xc_list,yc_list,z_list = debris_tracking.remap_avoid(xc_hat_list,
+                             yc_hat_list, debris_list, obst_list, z_guess_list)
+    z0_list = z_list
 
 obst_list = []
 
@@ -137,7 +172,7 @@ else:
 
 
 t0 = 34.
-nsteps = 31 #221
+nsteps = 71 #221
 dt = 0.3
 
 debris_path_list = debris_tracking.make_debris_path_list(debris_list,
@@ -150,8 +185,8 @@ if 1:
     # ===========
     # plotting
 
-    fgout_grid_extent = [30, 43.75, -3, 3]
-    fgout_grid_extent = [30, 36, -2, 2]
+    #fgout_grid_extent = [30, 43.75, -3, 3]
+    fgout_grid_extent = [30, 40, -2, 2]
 
     bgimage = None
     #plot_extent = [34, 43.75, -3, 3]
@@ -273,7 +308,7 @@ if 1:
     # plot debris:
 
     #c = {'no':'g', 'static':'r', 'kinetic':'orange'}
-    c = {'wood':'g', 'hdpe':'orange'}
+    c = {'wood':'g', 'hdpe':'r'}
 
     plot_debris_list = []
     for debris_path in debris_path_list:
