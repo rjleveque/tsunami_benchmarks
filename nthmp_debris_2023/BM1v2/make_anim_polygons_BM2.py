@@ -10,7 +10,7 @@ from shapely import Polygon
 import copy
 
 debris_wood = debris_tracking.DebrisObject()
-debris_wood.L = 3 * [0.102]  # 3 sides define square, will have 4 corners
+debris_wood.L = 3 * [0.102]  # 3 sides define square, will have 4 corners #0.102
 debris_wood.phi = [0, pi/2, pi/2]
 debris_wood.height = 0.051
 debris_wood.bottom_area = debris_wood.L[0]*debris_wood.L[1]  # assuming rectangle
@@ -68,7 +68,11 @@ for j in range(nrows):
         debris_list.append(debris)
         blockno += 1
 
-if randomize:
+block_frame = [0,50,-5,5]
+
+
+#if randomize:
+if 0:
     obst_list = []
     xc_hat_list = []
     yc_hat_list = []
@@ -78,12 +82,13 @@ if randomize:
         xc_hat_list.append(xc_hat)
         yc_hat_list.append(yc_hat)
     xc_list,yc_list,z_list = debris_tracking.remap_avoid(xc_hat_list,
-                             yc_hat_list, debris_list, obst_list, z_guess_list)
+                             yc_hat_list, debris_list, z_guess_list,
+                             obst_list, block_frame)
     z0_list = z_list
 
 obst_list = []
 
-if 1:
+if 0:
     # back wall:
     xwall2 = 43.75
     x1b = xwall2
@@ -97,6 +102,10 @@ if 1:
     obst_list.append(obst_polygon)
 
 if 1:
+    # domain defines back wall:
+    domain = [0, 43.75, -3, 3]
+
+if 1:
     # block 1:
     x1b = 35.29
     x2b = x1b + 0.4
@@ -106,7 +115,15 @@ if 1:
     obst_y = array([y1b,y2b,y2b,y1b])
     obst_p = vstack((obst_x,obst_y)).T
     obst_polygon = Polygon(obst_p)
-    obst_list.append(obst_polygon)
+    xcentroid = obst_x.mean()
+    ycentroid = obst_y.mean()
+    radius = 0.5*sqrt(2)*(x2b-x1b) # for square
+    obst = {}
+    obst['polygon'] = obst_polygon
+    obst['xcentroid'] = xcentroid
+    obst['ycentroid'] = ycentroid
+    obst['radius'] = radius
+    obst_list.append(obst)
 
     # block 2:
     x1b = 35.29
@@ -117,7 +134,15 @@ if 1:
     obst_y = array([y1b,y2b,y2b,y1b])
     obst_p = vstack((obst_x,obst_y)).T
     obst_polygon = Polygon(obst_p)
-    obst_list.append(obst_polygon)
+    xcentroid = obst_x.mean()
+    ycentroid = obst_y.mean()
+    radius = 0.5*sqrt(2)*(x2b-x1b) # for square
+    obst = {}
+    obst['polygon'] = obst_polygon
+    obst['xcentroid'] = xcentroid
+    obst['ycentroid'] = ycentroid
+    obst['radius'] = radius
+    obst_list.append(obst)
 
 use_sim_data = True
 
@@ -172,11 +197,11 @@ else:
 
 
 t0 = 34.
-nsteps = 71 #221
-dt = 0.3
+nsteps = 101 #221
+dt = 0.2 #0.3
 
 debris_path_list = debris_tracking.make_debris_path_list(debris_list,
-                                    obst_list,z0_list,t0,dt,nsteps,
+                                    z0_list,obst_list,domain,t0,dt,nsteps,
                                     h_fcn,u_fcn,v_fcn, verbose=False)
 
 
@@ -320,8 +345,8 @@ if 1:
         plot_debris_list.append(plotn)
 
     #plot_obst_list = []
-    for obst_poly in obst_list:
-        obst_xy = array(obst_poly.exterior.coords)
+    for obst in obst_list:
+        obst_xy = array(obst['polygon'].exterior.coords)
         plot(obst_xy[:,1], obst_xy[:,0], 'c')
 
     grid(True)
@@ -365,7 +390,7 @@ if __name__ == '__main__':
                                    frames=len(debris_path.times),
                                    interval=200, blit=False)
 
-    fname_mp4 = 'polygon_test_bm4.mp4'
+    fname_mp4 = 'polygon_test_bm2.mp4'
     fps = 5
     print('Making mp4...')
     animation_tools.make_mp4(anim, fname_mp4, fps)

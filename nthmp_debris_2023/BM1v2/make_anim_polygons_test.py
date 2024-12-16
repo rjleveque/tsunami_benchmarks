@@ -18,6 +18,7 @@ debris.bottom_area = debris.L[0]*debris.L[1]  # assuming rectangle
 debris.face_width = debris.L[0]  # assuming square
 debris.friction_static = 0.35
 debris.friction_kinetic = 0.25
+debris.info = {'friction':'static'}
 debris.advect = False
 mass = 14.5 # kg
 debris.rho = mass / (debris.height * debris.bottom_area)
@@ -55,7 +56,7 @@ if config in [3,4]:
 
 obst_list = []
 
-if 1:
+if 0:
     # back wall:
     xwall2 = 43.75
     x1b = xwall2
@@ -68,6 +69,10 @@ if 1:
     obst_polygon = Polygon(obst_p)
     obst_list.append(obst_polygon)
 
+if 1:
+    # domain defines back wall:
+    domain = [0, 43.75, -3, 3]
+
 if config not in [1,3,7]:
     # obstacle -- stationary block:
     x1b = 35.54
@@ -78,7 +83,15 @@ if config not in [1,3,7]:
     obst_y = array([y1b,y2b,y2b,y1b])
     obst_p = vstack((obst_x,obst_y)).T
     obst_polygon = Polygon(obst_p)
-    obst_list.append(obst_polygon)
+    xcentroid = obst_x.mean()
+    ycentroid = obst_y.mean()
+    radius = 0.5*sqrt(2)*(x2b-x1b) # for square
+    obst = {}
+    obst['polygon'] = obst_polygon
+    obst['xcentroid'] = xcentroid
+    obst['ycentroid'] = ycentroid
+    obst['radius'] = radius
+    obst_list.append(obst)
 
 
 use_sim_data = True
@@ -133,11 +146,11 @@ else:
 
 
 t0 = 34.
-nsteps = 120 #221
+nsteps = 40 #120 #221
 dt = 0.1
 
 debris_path_list = debris_tracking.make_debris_path_list(debris_list,
-                                    obst_list,z0_list,t0,dt,nsteps,
+                                    z0_list,obst_list,domain,t0,dt,nsteps,
                                     h_fcn,u_fcn,v_fcn, verbose=False)
 
 
@@ -278,8 +291,8 @@ if 1:
         plot_debris_list.append(plotn)
 
     #plot_obst_list = []
-    for obst_poly in obst_list:
-        obst_xy = array(obst_poly.exterior.coords)
+    for obst in obst_list:
+        obst_xy = array(obst['polygon'].exterior.coords)
         plot(obst_xy[:,1], obst_xy[:,0], 'c')
 
     grid(True)

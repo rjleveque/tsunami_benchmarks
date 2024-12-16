@@ -5,6 +5,7 @@ Need to add interaction between debris Objects or with walls.
 """
 
 from pylab import *
+import shapely
 
 
 class DebrisObject():
@@ -25,6 +26,8 @@ class DebrisObject():
 
         self.z0 = [0.,0.,0.]  # location and orientation [x0,y0,theta0]
 
+        self._radius = None  # calculate first time its requested
+
         # these can be generated using velocity field from CFD simulation:
         self.times = []
         self.corner_paths = [] # should be list of [t_n, corners_n, info] where
@@ -39,6 +42,19 @@ class DebrisObject():
     @property
     def draft(self):
         return (self.rho / self.rho_water) * self.height
+
+    @property
+    def radius(self):
+        if self._radius is None:
+            xc,yc = self.get_corners(self.z0)
+            poly = shapely.Polygon(vstack((xc,yc)).T)
+            xcentroid = poly.centroid.x
+            ycentroid = poly.centroid.y
+            xc,yc = self.get_corners(self.z0)
+            r2 = ((xc-xcentroid)**2 + (yc-ycentroid)**2).max()
+            self._radius = sqrt(r2)
+        return self._radius
+
 
     def get_corners(self, z, close_poly=False):
         """
@@ -293,7 +309,7 @@ def make_debris_path(debris,z0,t0,dt,nsteps,h_fcn,u_fcn,v_fcn,verbose=False):
 
     return debris_path
 
-def make_debris_path_list(debris_list, obst_list, z0_list,
+def make_debris_path_list(debris_list, z0_list, obst_list, domain,
                           t0,dt,nsteps, h_fcn,u_fcn,v_fcn, verbose=False):
 
     debris_path_list = []
@@ -486,7 +502,8 @@ def make_debris_path_list(debris_list, obst_list, z0_list,
         # remap to original shape, maintaining rigidity and
         # avoiding collisions:
         xc_list, yc_list, z_list = remap_avoid(xc_hat_list, yc_hat_list,
-                                          debris_list, obst_list, z_guess_list)
+                                          debris_list, z_guess_list,
+                                          obst_list, domain)
         #print('+++ after remap_avoid:')
         #print('+++ xc_list = ',repr(xc_list))
         #print('+++ yc_list = ',repr(yc_list))
@@ -528,7 +545,6 @@ def remap(xc_hat, yc_hat, z_guess, get_corners):
         """
         Objective function for least squares fitting
         """
-        from shapely import Polygon
 
         # compute current guess at corners from z:
         xc,yc = get_corners(z)
@@ -545,19 +561,20 @@ def remap(xc_hat, yc_hat, z_guess, get_corners):
     #print('+++ z_guess: ',z_guess)
     #print('+++ F: ',F(z_guess))
 
-    result = least_squares(F,z_guess)
+    result = least_squares(F,z_guess,method='lm',max_nfev=500)
     xc,yc = get_corners(result['x'])
     theta = result['x'][2]
     #print('+++ remap result: ',result)
     return xc,yc,theta
 
 
-def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
+def remap_avoid(xc_hat_list, yc_hat_list, debris_list, z_guess_list,
+                obst_list=[], domain=[-inf,inf,-inf,inf]):
     """
     Adjust xc_hat, yc_hat to xc,yc so that original shape is preserved.
     z_guess is initial guess for z defining xc,yc.
 
-    Avoid collisions.
+    Avoid overlapping the obstacles in obst_list and stay inside the domain.
     """
 
     from scipy.optimize import least_squares
@@ -570,10 +587,11 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
         """
         Objective function for least squares fitting
         """
-        from shapely import Polygon
 
         #print('+++ in F, z_all = ',z_all)
         f_total = array([], dtype=float)
+        Fover = 0.
+        Fwalls = 0.
 
         for dbno in range(len(debris_list)):
             debris = debris_list[dbno]
@@ -592,14 +610,31 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
 
             f_total = hstack((f_total, f))
 
+            Wover = 100.
+
             # debris-obstacle collisions:
 
-            debris_polygon = Polygon(vstack((xc,yc)).T)
+            debris_polygon = shapely.Polygon(vstack((xc,yc)).T)
+            debris_xcentroid = debris_polygon.centroid.x
+            debris_ycentroid = debris_polygon.centroid.y
 
             for obno in range(len(obst_list)):
-                obst_polygon = obst_list[obno]
-                overlap_area = obst_polygon.intersection(debris_polygon).area
-                f_total = hstack((f_total, 100*overlap_area))
+                #obst_polygon = obst_list[obno]
+                obst = obst_list[obno]
+                #overlap_area = obst_polygon.intersection(debris_polygon).area
+                if sqrt((debris_xcentroid - obst['xcentroid'])**2 + \
+                        (debris_ycentroid - obst['ycentroid'])**2) < \
+                        (debris.radius + obst['radius']):
+                    # potential overlap, compute area:
+                    overlap_area = \
+                        obst['polygon'].intersection(debris_polygon).area
+                    #print('+++dbno=%i, obno=%i, area=%g, centroid=%g,%g' \
+                    #        % (dbno,obno,overlap_area,
+                    #           debris_xcentroid,debris_ycentroid))
+                else:
+                    overlap_area = 0.
+                f_total = hstack((f_total, Wover*overlap_area))
+                Fover += Wover*overlap_area
 
             # debris-debris collisions:
 
@@ -609,9 +644,23 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
                 z2 = z_all[3*dbno2:3*dbno2+3]
                 xc2,yc2 = debris2.get_corners(z2)
                 #print('+++ dbno2 = %i, z2 = %s' % (dbno2,z2))
-                debris2_polygon = Polygon(fliplr(vstack((xc2,yc2))).T)
-                overlap_area = debris2_polygon.intersection(debris_polygon).area
-                f_total = hstack((f_total, 100*overlap_area))
+                debris2_polygon = shapely.Polygon(fliplr(vstack((xc2,yc2))).T)
+                debris2_xcentroid = debris2_polygon.centroid.x
+                debris2_ycentroid = debris2_polygon.centroid.y
+                if sqrt((debris_xcentroid - debris2_xcentroid)**2 + \
+                        (debris_ycentroid - debris2_ycentroid)**2) < \
+                        (debris.radius + debris2.radius):
+                    # potential overlap, compute area:
+                    overlap_area = \
+                        debris2_polygon.intersection(debris_polygon).area
+                    #print('+++dbno=%i, dbno2=%i, area=%g' \
+                    #        % (dbno,dbno2,overlap_area))
+                else:
+                    overlap_area = 0.
+                f_total = hstack((f_total, Wover*overlap_area))
+                Fover += Wover*overlap_area
+
+                #overlap_area = debris2_polygon.intersection(debris_polygon).area
                 #print('+++ dbno = %i, dbno2 = %i, overlap = %g' \
                 #        % (dbno,dbno2,overlap_area))
                 #print('xc%i = %s' % (dbno,repr(array(xc))))
@@ -619,6 +668,25 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
                 #print('xc%i = %s' % (dbno2,repr(array(xc2))))
                 #print('yc%i = %s' % (dbno2,repr(array(yc2))))
 
+            # debris-wall collisions:
+            x1,x2,y1,y2 = domain
+            if xc.min() < x1:
+                #f_total = hstack((f_total, Wover*(x1 - xc.min())**2))
+                Fwalls += Wover*(x1 - xc.min())**2
+            if xc.max() > x2:
+                #f_total = hstack((f_total, Wover*(xc.max() - x2)**2))
+                Fwalls += Wover*(xc.max() - x2)**2
+            if yc.min() < y1:
+                #f_total = hstack((f_total, Wover*(y1 - yc.min())**2))
+                Fwalls += Wover*(y1 - yc.min())**2
+            if yc.max() > y2:
+                #f_total = hstack((f_total, Wover*(yc.max() - y2)**2))
+                Fwalls += Wover*(yc.max() - y2)**2
+
+        f_total = hstack((f_total, Fwalls))
+        #f_total = hstack((f_total, Fover))
+
+        #print('+++ F returning Fover = %.7e' % Fover)
         return f_total
 
     z_guess_all = z_guess_list[0]
@@ -631,7 +699,8 @@ def remap_avoid(xc_hat_list, yc_hat_list, debris_list, obst_list, z_guess_list):
 
     result = least_squares(F,z_guess_all)
     #print('+++ remap_avoid result: ',result)
-
+    print('+++ remap_avoid result: success = %s, nfev = %i' \
+        % (result['success'], result['nfev']))
 
     z_all = result['x']
     #print('+++ z_all after least squares: ',z_all)
