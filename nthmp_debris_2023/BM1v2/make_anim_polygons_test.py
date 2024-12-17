@@ -93,6 +93,10 @@ if config not in [1,3,7]:
     obst['radius'] = radius
     obst_list.append(obst)
 
+from load_fgout import fgout_grid
+Xplot = fgout_grid.X
+Yplot = fgout_grid.Y
+fgout_grid_extent = fgout_grid.extent_edges
 
 use_sim_data = True
 
@@ -103,7 +107,7 @@ if not use_sim_data:
     fgout_grid_extent = fgout_grid.extent_edges
 
 else:
-    # not working: u_vel_fcn((34.1, 34.34)) is nan
+    # now working in way that we can plot h or u too
     # use provided sim data instead of GeoClaw fgout results:
     import pickle
     with open('../BM1/sim_data.pickle','rb') as f:
@@ -112,8 +116,10 @@ else:
     u_vel_fcn = sim_data['u_vel_fcn']  # function that interpolates u_vel to (t,x)
 
     def u_fcn(x,y,t):
-        tx = vstack((t,x)).T
+        #tx = vstack((t,x)).T
+        tx = [(t,xj) for xj in x.ravel()]
         u_vel = u_vel_fcn(tx)
+        u_vel = reshape(u_vel, x.shape)
         u = where(isnan(u_vel), 0., u_vel)
         return u
 
@@ -132,21 +138,25 @@ else:
         return B
 
     def h_fcn(x,y,t):
-        tx = vstack((t,x)).T
+        #tx = vstack((t,x)).T
+        tx = [(t,xj) for xj in x.ravel()]
         zeta = zeta_fcn(tx)
+        zeta = reshape(zeta, x.shape)
         h = where(isnan(zeta), 0., zeta - B(x))
         return h
 
-    fgout_times = array([0, 30., 60.])
-    fgout_h_txy = zeros((3,400,60))
-    fgout_u_txy = zeros((3,400,60))
-    fgout_v_txy = zeros((3,400,60))
-    fgout_grid_extent = [33.75, 43.75, -3.0, 3.0]
+    if 0:
+        # not used:
+        fgout_times = array([0, 30., 60.])
+        fgout_h_txy = zeros((3,400,60))
+        fgout_u_txy = zeros((3,400,60))
+        fgout_v_txy = zeros((3,400,60))
+        fgout_grid_extent = [33.75, 43.75, -3.0, 3.0]
 
 
 
 t0 = 34.
-nsteps = 40 #120 #221
+nsteps = 120 #221
 dt = 0.1
 
 debris_path_list = debris_tracking.make_debris_path_list(debris_list,
@@ -181,6 +191,7 @@ if 1:
     #ax.plot([y1b,y1b,y2b,y2b,y1b], [x1b,x2b,x2b,x1b,x1b], 'g')
 
     imqoi = 'Depth'
+    #imqoi = 'Speed'
     fgframeno = 0  # initial fgout frame to use from fgout_h_txy
 
     if imqoi=='Depth':
@@ -210,7 +221,8 @@ if 1:
 
         norm_depth = colors.BoundaryNorm(bounds_depth, cmap_depth.N)
 
-        fgout_h = fgout_h_txy[fgframeno,:,:]
+        #fgout_h = fgout_h_txy[fgframeno,:,:]
+        fgout_h = h_fcn(Xplot,Yplot,t0)
         eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
 
         im = imshow(flipud(eta_water), extent=fgout_extent,
@@ -234,8 +246,10 @@ if 1:
     else:
         # speed
         s_units = 'm/s'
-        fgout_s = sqrt(fgout_u_txy[fgframeno,:,:]**2 + \
-                       fgout_v_txy[fgframeno,:,:]**2)
+        #fgout_s = sqrt(fgout_u_txy[fgframeno,:,:]**2 + \
+        #               fgout_v_txy[fgframeno,:,:]**2)
+        fgout_s = sqrt(u_fcn(Xplot,Yplot,t0)**2 + \
+                       v_fcn(Xplot,Yplot,t0)**2)
         if s_units == 'knots':
             s = fgout_s * 1.9438  # convert m/s to knots
             bounds_speed = np.array([1e-3,3,4,6,9,12])  # knots
@@ -314,15 +328,18 @@ if 1:
 
         # color image:
         # choose closes fgout frame for now...
-        fgframeno = where(fgout_times <= t_n)[0].max()
+        #fgframeno = where(fgout_times <= t_n)[0].max()
 
         if imqoi == 'Depth':
-            fgout_h = fgout_h_txy[fgframeno,:,:]
+            #fgout_h = fgout_h_txy[fgframeno,:,:]
+            fgout_h = h_fcn(Xplot,Yplot,t_n)
             eta_water = np.ma.masked_where(fgout_h < 1e-3, fgout_h)
             im.set_data(flipud(eta_water))
         else:
-            fgout_s = sqrt(fgout_u_txy[fgframeno,:,:]**2 + \
-                           fgout_v_txy[fgframeno,:,:]**2)
+            #fgout_s = sqrt(fgout_u_txy[fgframeno,:,:]**2 + \
+            #               fgout_v_txy[fgframeno,:,:]**2)
+            fgout_s = sqrt(u_fcn(Xplot,Yplot,t_n)**2 + \
+                           v_fcn(Xplot,Yplot,t_n)**2)
             im.set_data(flipud(fgout_s))
 
         t_str = '%.2f seconds' % t_n
@@ -366,14 +383,15 @@ def plot_centroids(debris_path_list):
         ylabel('u velocity (m/s)')
         xlim(xlimits)
 
-        subplot(313)
-        centroids_h = h_fcn(centroids_x, centroids_y, times)
-        plot(times,100*centroids_h,'r',label=fluid_label)
-        legend(loc='upper right', framealpha=1)
-        grid(True)
-        title('water depth')
-        ylabel('water depth (cm)')
-        xlim(xlimits)
+        if 0:
+            subplot(313)
+            centroids_h = h_fcn(centroids_x, centroids_y, times)
+            plot(times,100*centroids_h,'r',label=fluid_label)
+            legend(loc='upper right', framealpha=1)
+            grid(True)
+            title('water depth')
+            ylabel('water depth (cm)')
+            xlim(xlimits)
 
         xlabel('time (sec)')
 
@@ -394,7 +412,7 @@ def plot_centroids(debris_path_list):
         savefig(fname, bbox_inches='tight')
         print('Created ',fname)
 
-    return centroids_x, centroids_y, centroids_u, centroids_v, centroids_h
+    return centroids_x, centroids_y, centroids_u, centroids_v
 
 if __name__ == '__main__':
 
@@ -403,7 +421,7 @@ if __name__ == '__main__':
                                    frames=len(debris_path.times),
                                    interval=200, blit=False)
 
-    fname_mp4 = 'polygon_test.mp4'
+    fname_mp4 = 'polygon_BM1_config%s.mp4' % config
     fps = 5
     print('Making mp4...')
     animation_tools.make_mp4(anim, fname_mp4, fps)
