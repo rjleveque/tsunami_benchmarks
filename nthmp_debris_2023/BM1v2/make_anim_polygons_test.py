@@ -24,11 +24,11 @@ mass = 14.5 # kg
 debris.rho = mass / (debris.height * debris.bottom_area)
 print('Draft = %.2fm' % debris.draft)
 
-config = 4
+config = 12
 
 if config in [1,2]:
     debris_list = [debris]
-    z0 = [34.94, 0.82, 0]  # determines initial debris location
+    z0 = [34.34, 0.22, 0]  # determines initial debris location
     z0_list = [z0]
 
 
@@ -52,7 +52,25 @@ if config in [3,4]:
     debris_list.append(debris)
     z0_list.append(z0)
 
-
+if config == 12:
+    # large debris
+    debris = debris_tracking.DebrisObject()
+    debris.L = 3 * [1.2]  # 3 sides define square, will have 4 corners
+    debris.phi = [0, pi/2, pi/2]
+    debris.height = 0.4
+    debris.bottom_area = debris.L[0]*debris.L[1]  # assuming rectangle
+    debris.face_width = debris.L[0]  # assuming square
+    debris.friction_static = 0.35
+    debris.friction_kinetic = 0.25
+    debris.info = {'friction':'static'}
+    debris.advect = False
+    mass = 14.5 * 4 # kg
+    debris.rho = mass / (debris.height * debris.bottom_area)
+    print('Draft = %.2fm' % debris.draft)
+    debris_list = [debris]
+    
+    z0 = [34.34, 0.22, 0]  # determines initial debris location
+    z0_list = [z0]
 
 obst_list = []
 
@@ -156,7 +174,7 @@ else:
 
 
 t0 = 34.
-nsteps = 120 #221
+nsteps = 221 #120 #221
 dt = 0.1
 
 debris_path_list = debris_tracking.make_debris_path_list(debris_list,

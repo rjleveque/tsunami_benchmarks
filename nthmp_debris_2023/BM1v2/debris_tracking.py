@@ -360,8 +360,9 @@ def make_debris_path_list(debris_list, z0_list, obst_list, domain,
             h_ave = hc_n.mean()
 
             friction = 'no'
+            stol = 1e-3
             if h_ave < debris.draft:
-                if abs(uc_n).max() + abs(vc_n).max() < 1e-3:
+                if abs(uc_n).max() + abs(vc_n).max() < stol:
                     # corner velocities at t_n were all zero, check static friction:
                     friction = 'static'
                 else:
@@ -423,69 +424,46 @@ def make_debris_path_list(debris_list, z0_list, obst_list, domain,
                         # grounded:
                         uk_hat = 0.
                         vk_hat = 0.
+
                 else:
-                    # compute forces and acceleration for this corner:
 
                     # force Ffluid exerted by fluid based on velocity difference:
                     du = uk_fluid - uk_n
                     dv = vk_fluid - vk_n
                     sk_f = sqrt(du**2 + dv**2)
-                    Ffluid_x = 0.5 * debris.rho_water * sk_f * du * corner_face_area
-                    Ffluid_y = 0.5 * debris.rho_water * sk_f * dv * corner_face_area
-                    #Ffluid_x = 0.
-                    #Ffluid_y = 0.
-                    Ffluid = sqrt(Ffluid_x**2 + Ffluid_y**2)
+                    Cfluid = 0.5 * debris.rho_water * sk_f * corner_face_area
+                    Ffluid = Cfluid * sk_f # magnitude of force
 
-                    if friction != 'no':
-                        Ffriction1 = debris.grav * corner_bottom_area \
-                                    * (debris.rho * debris.height - \
-                                       debris.rho_water * h_ave)
-                        if friction == 'static':
-                            Ffriction = debris.friction_static * Ffriction1
-                            Fnet = max(0., Ffluid - Ffriction)
-                            # now rescale (Ffluid_x, Ffluid_y) vector
-                            # to have length Fnet (net force after static friction)
-                            if abs(Ffluid) < 0.001:
-                                # avoid divide by zero:
-                                Fnet_x = Fnet_y = 0.
-                            else:
-                                # Fnet force acts in direction of fluid motion:
-                                Fnet_x = Ffluid_x * Fnet / Ffluid
-                                Fnet_y = Ffluid_y * Fnet / Ffluid
-                            #print('+++s at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
-                            #     % (t_n, k, Ffluid, Ffriction, Fnet_x))
-                        elif friction == 'kinetic':
-                            Ffriction = debris.friction_kinetic * Ffriction1
-                            sk_n = sqrt(uk_n**2 + vk_n**2)  # speed of corner
-                            #Fnet_x = Ffluid_x - Ffriction * uk_n / sk_n
-                            #Fnet_y = Ffluid_y - Ffriction * vk_n / sk_n
-                            # Do not attempt to apply this force with explicit
-                            # algorithm, instead handle below with exp decay
-                            Fnet_x = Ffluid_x
-                            Fnet_y = Ffluid_y
-                            #print('+++k at t = %.1f, k = %i, Ffluid = %.3f, Ffriction = %.3f, Fnet_x = %.3f' \
-                            #     % (t_n, k, Ffluid, Ffriction, Fnet_x))
+                    # uk velocity relaxes toward uk_fluid:
+                    uk_hat = uk_fluid + exp(-Cfluid*dt/corner_mass) \
+                                            * (uk_n - uk_fluid)
+                    vk_hat = vk_fluid + exp(-Cfluid*dt/corner_mass) \
+                                            * (vk_n - vk_fluid)
 
-                        if verbose:
-                            print('k = %i, Ffluid = %.3f, Ffriction = %.3f' \
-                                % (k,Ffluid,Ffriction))
+                    # friction factor g * bottom_area * (mass difference)
+                    Ffriction1 = debris.grav * corner_bottom_area \
+                                * (debris.rho * debris.height - \
+                                   debris.rho_water * h_ave)
 
-                    else:
-                        # not in contact with bottom, only fluid force:
-                        Fnet_x = Ffluid_x
-                        Fnet_y = Ffluid_y
-
-                    uk_hat = uk_n + dt*Fnet_x / corner_mass
-                    vk_hat = vk_n + dt*Fnet_y / corner_mass
+                    if abs(uk_n) + abs(vk_n) <= stol:
+                        # check static friction:
+                        Ffriction = debris.friction_static * Ffriction1
+                        if Ffluid < Ffriction:
+                            # reset velocities to 0:
+                            uk_hat = 0.
+                            vk_hat = 0.
 
                     if friction == 'kinetic':
-                         decay = exp(-Ffriction / sk_n  * dt/corner_mass)
-                         uk_hat *= decay
-                         vk_hat *= decay
-
-                    if verbose:
-                        print('k = %i, Fnet_x = %.3f, Fnet_y = %.3f' \
-                            % (k,Fnet_x,Fnet_y))
+                        Ffriction = debris.friction_kinetic * Ffriction1
+                        sk_hat = sqrt(uk_hat**2 + vk_hat**2)  # speed of corner
+                        # speed after slowing down at constant rate:
+                        sk_n = sqrt(uk_n**2 + vk_n**2)
+                        sk_np = max(0, sk_n - dt*Ffriction/corner_mass)
+                        # reduce speed correspondingly in each coord direction:
+                        if sk_n > 0:
+                            # should be true if kinetic
+                            uk_hat *= sk_np / sk_n
+                            vk_hat *= sk_np / sk_n
 
                 uc_hat[k] = uk_hat
                 vc_hat[k] = vk_hat
