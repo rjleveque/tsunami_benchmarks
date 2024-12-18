@@ -17,12 +17,12 @@ from datetime import timedelta
 import pickle
 
 try:
-    from clawpack.geoclaw_1d import geoplot
+    from clawpack.geoclaw import geoplot
 except:
-    print('Could not import from geoclaw_1d')
+    print('Could not import geoplot from geoclaw')
 
 
-from clawpack.geoclaw_1d.nonuniform_grid_tools import make_mapc2p
+from clawpack.geoclaw.nonuniform_grid_tools import make_mapc2p
 import numpy
     
 with open('../sim_data.pickle','rb') as f:
