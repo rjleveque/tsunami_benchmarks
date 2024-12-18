@@ -13,7 +13,7 @@ CLAWMAKE = $(CLAW)/clawutil/src/Makefile.common
 # ----------------------------------
 
 CLAW_PKG = geoclaw                  # Clawpack package to use
-EXE = xgeo                          # Executable to create
+EXE = xgeo_old                          # Executable to create
 SETRUN_FILE = setrun.py             # File containing function to make data
 OUTDIR = _output                    # Directory for output
 SETPLOT_FILE = setplot.py           # File containing function to set plots
@@ -32,8 +32,9 @@ FFLAGS =  -llapack -lblas -g
 # package sources for this program:
 # ---------------------------------
 
-GEOLIB = $(CLAW)/geoclaw_1d/src/1d_classic/bouss
-include $(GEOLIB)/Makefile.geoclaw_1d_classic_bouss
+BOUSSLIB = $(CLAW)/geoclaw_1d/src/1d_classic/bouss
+include $(BOUSSLIB)/Makefile.geoclaw_1d_classic_bouss
+
 
 # ---------------------------------------
 # package sources specifically to exclude
@@ -61,7 +62,7 @@ SOURCES = \
 include $(CLAWMAKE)
 
 # Construct the topography data
-.PHONY: topo all
+.PHONY: topo all debug
 
 topo:
 	python make_celledges.py
@@ -71,3 +72,5 @@ all:
 	$(MAKE) .plots
 	$(MAKE) .htmls
 
+debug:
+	echo BOUSSLIB = $(BOUSSLIB)

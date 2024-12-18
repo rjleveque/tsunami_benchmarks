@@ -32,7 +32,7 @@ u_vel_fcn = sim_data['u_vel_fcn']  # function that interpolates u_vel to (t,x)
 
 #outdir1 = '../SGN1d/_output'
 outdir1 = '_output_SGNa'
-outdir2 = '_output'
+outdir2 = '_output_SWE'
 format = 'ascii'  # format of fgout grid output
 
 fname_celledges = os.path.abspath('celledges.data')
