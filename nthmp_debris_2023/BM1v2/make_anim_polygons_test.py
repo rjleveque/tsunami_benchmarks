@@ -68,7 +68,7 @@ if config == 12:
     debris.rho = mass / (debris.height * debris.bottom_area)
     print('Draft = %.2fm' % debris.draft)
     debris_list = [debris]
-    
+
     z0 = [34.34, 0.22, 0]  # determines initial debris location
     z0_list = [z0]
 
@@ -111,17 +111,34 @@ if config not in [1,3,7]:
     obst['radius'] = radius
     obst_list.append(obst)
 
-from load_fgout import fgout_grid
-Xplot = fgout_grid.X
-Yplot = fgout_grid.Y
-fgout_grid_extent = fgout_grid.extent_edges
+if 0:
+    from load_fgout import fgout_grid
+    Xplot = fgout_grid.X
+    Yplot = fgout_grid.Y
+    fgout_grid_extent = fgout_grid.extent_edges
 
-use_sim_data = True
+use_sim_data = False
 
 if not use_sim_data:
 
-    from load_fgout import fgout_grid, h_fcn, u_fcn, v_fcn, fgout_times, \
-                           fgout_h_txy, fgout_u_txy, fgout_v_txy
+    #from load_fgout import fgout_grid, h_fcn, u_fcn, v_fcn, fgout_times, \
+    #                       fgout_h_txy, fgout_u_txy, fgout_v_txy
+    import load_fgout_fcn
+    if config == 3:
+        outdir = '../BM1/SWE2d/_output_dtopo4_noblock'
+    if config in [4,12]:
+        #outdir = '../BM1/SWE2d/_output_dtopo4_noblock'
+        outdir = '../BM1/SWE2d/_output_dtopo4_block'
+    #fgframes = range(1,45)
+    fgframes = None
+    fgno = 1
+    fgout_data = load_fgout_fcn.load_fgout(outdir,fgno,fgframes)
+    # unpack:
+    fgout_grid, h_fcn, u_fcn, v_fcn, fgout_times, \
+           fgout_h_txy, fgout_u_txy, fgout_v_txy = fgout_data
+    fgout_grid_extent = fgout_grid.extent_edges
+    Xplot = fgout_grid.X
+    Yplot = fgout_grid.Y
     fgout_grid_extent = fgout_grid.extent_edges
 
 else:
