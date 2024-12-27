@@ -25,10 +25,10 @@ debris.rho = mass / (debris.height * debris.bottom_area)
 print('Draft = %.2fm' % debris.draft)
 
 config = 12
-use_sim_data = True
+use_sim_data = False
 
-#plotdir = 'BM1_config12_dtopo4_block'
-plotdir = 'BM1_config12_simdata'
+plotdir = 'BM1_config12_dtopo4_block'
+#plotdir = 'BM1_config12_simdata'
 os.system('mkdir -p %s' % plotdir)
 
 if config in [1,2]:
@@ -217,6 +217,7 @@ if 1:
     # plotting
 
 
+
     bgimage = None
     #plot_extent = [34, 43.75, -3, 3]
     xlimits = [-3, 3]
@@ -354,7 +355,7 @@ if 1:
     #plot_obst_list = []
     for obst in obst_list:
         obst_xy = array(obst['polygon'].exterior.coords)
-        plot(obst_xy[:,1], obst_xy[:,0], 'c')
+        plot(obst_xy[:,1], obst_xy[:,0], 'k')
 
     grid(True)
 
@@ -390,7 +391,7 @@ if 1:
             im.set_data(flipud(fgout_s))
 
         t_str = '%.2f seconds' % t_n
-        title_text.set_text('%s at t = %s' % (imqoi,t_str))
+        title_text.set_text('%s at t = %s (n=%i)' % (imqoi,t_str,n))
 
 
 
@@ -421,6 +422,7 @@ def plot_centroids(debris_path_list):
         title('x-position for config %i' % config)
         ylabel('x (m)')
         xlim(xlimits)
+        ylim(34,44)
 
         subplot(312)
         plot(times,centroids_u,'b',label='GeoClaw tracking with %s' % fluid_label)
@@ -430,6 +432,7 @@ def plot_centroids(debris_path_list):
         title('cross-shore velocity')
         ylabel('u velocity (m/s)')
         xlim(xlimits)
+        ylim(-1,2)
 
         if 0:
             subplot(313)
@@ -451,8 +454,8 @@ def plot_centroids(debris_path_list):
         figure(202, figsize=(5,7)); clf()
         plot(centroids_y, centroids_x, 'b-')
         plot(centroids_y[::3], centroids_x[::3], 'b.', markersize=3)
-        axis([-1,1,44,34])
-        title('Centroid location for config 1')
+        axis([-2,2,44,34])
+        title('Centroid location for config %i' % config)
         xlabel('y (m)')
         ylabel('x (m)')
         grid(True)
@@ -462,6 +465,28 @@ def plot_centroids(debris_path_list):
 
     return centroids_x, centroids_y, centroids_u, centroids_v
 
+def plot_frames(n_list=None):
+    if n_list is None:
+        if config > 0:
+            n_list = range(0,221,20)
+    for n in n_list:
+        update(n)
+        fname = '%s/frame%s.png' % (plotdir,str(n).zfill(4))
+        fig.savefig(fname, bbox_inches='tight')
+        print('Saved ', fname)
+
+def make_animation():
+    print('Making anim...')
+    anim = animation.FuncAnimation(fig, update,
+                                   frames=len(debris_path.times),
+                                   interval=200, blit=False)
+
+    fname_mp4 = '%s/BM1_config%s.mp4' % (plotdir,config)
+    fps = 5
+    print('Making mp4...')
+    animation_tools.make_mp4(anim, fname_mp4, fps)
+    
+
 if __name__ == '__main__':
 
     print('Making anim...')
@@ -469,11 +494,12 @@ if __name__ == '__main__':
                                    frames=len(debris_path.times),
                                    interval=200, blit=False)
 
-    fname_mp4 = '%s/polygon_BM1_config%s.mp4' % (plotdir,config)
+    fname_mp4 = '%s/BM1_config%s.mp4' % (plotdir,config)
     fps = 5
     print('Making mp4...')
     animation_tools.make_mp4(anim, fname_mp4, fps)
 
+    plot_frames()
     centroids = plot_centroids(debris_path_list)
 
     if use_sim_data:
