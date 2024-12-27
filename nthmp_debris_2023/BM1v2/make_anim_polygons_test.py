@@ -7,7 +7,7 @@ from clawpack.visclaw import animation_tools, plottools, geoplot
 from clawpack.geoclaw import fgout_tools
 import debris_tracking
 from shapely import Polygon
-import copy
+import copy, os
 
 # small debris:
 debris = debris_tracking.DebrisObject()
@@ -25,6 +25,11 @@ debris.rho = mass / (debris.height * debris.bottom_area)
 print('Draft = %.2fm' % debris.draft)
 
 config = 12
+use_sim_data = True
+
+#plotdir = 'BM1_config12_dtopo4_block'
+plotdir = 'BM1_config12_simdata'
+os.system('mkdir -p %s' % plotdir)
 
 if config in [1,2]:
     debris_list = [debris]
@@ -117,7 +122,6 @@ if 0:
     Yplot = fgout_grid.Y
     fgout_grid_extent = fgout_grid.extent_edges
 
-use_sim_data = False
 
 if not use_sim_data:
 
@@ -126,9 +130,11 @@ if not use_sim_data:
     import load_fgout_fcn
     if config == 3:
         outdir = '../BM1/SWE2d/_output_dtopo4_noblock'
-    if config in [4,12]:
+    elif config in [4,12]:
         #outdir = '../BM1/SWE2d/_output_dtopo4_noblock'
         outdir = '../BM1/SWE2d/_output_dtopo4_block'
+    else:
+        print('Need to set outdir for config %i' % config)
     #fgframes = range(1,45)
     fgframes = None
     fgno = 1
@@ -144,6 +150,12 @@ if not use_sim_data:
 else:
     # now working in way that we can plot h or u too
     # use provided sim data instead of GeoClaw fgout results:
+
+    xplot = linspace(33.7625, 43.7375, 400)
+    yplot = linspace(-2.95, 2.95, 60)
+    Xplot,Yplot = meshgrid(xplot, yplot, indexing='ij')
+    fgout_grid_extent = [33.75,43.75,-3,3]
+
     import pickle
     with open('../BM1/sim_data.pickle','rb') as f:
         sim_data = pickle.load(f)
@@ -396,7 +408,8 @@ def plot_centroids(debris_path_list):
         else:
             fluid_label = 'GeoClaw SWE flowfield'
 
-        d = loadtxt('/Users/rjl/git/tsunami_benchmarks/nthmp_debris_2023/BM1/Benchmark_1/comparison_data/paths_and_velocities/config1_vel.txt')
+        d = loadtxt('/Users/rjl/git/tsunami_benchmarks/nthmp_debris_2023/BM1/Benchmark_1/comparison_data/paths_and_velocities/config%i_vel.txt' \
+            % config)
         figure(201,figsize=(8,8)); clf()
         xlimits = (30,55)
 
@@ -405,7 +418,7 @@ def plot_centroids(debris_path_list):
         plot(d[:,0], d[:,1], 'c', label='provided comparison data')
         legend(loc='lower right', framealpha=1)
         grid(True)
-        title('x-position')
+        title('x-position for config %i' % config)
         ylabel('x (m)')
         xlim(xlimits)
 
@@ -431,7 +444,7 @@ def plot_centroids(debris_path_list):
         xlabel('time (sec)')
 
         tight_layout()
-        fname = 'centroids_xu.png'
+        fname = '%s/centroids_xu.png' % plotdir
         savefig(fname, bbox_inches='tight')
         print('Created ',fname)
 
@@ -443,7 +456,7 @@ def plot_centroids(debris_path_list):
         xlabel('y (m)')
         ylabel('x (m)')
         grid(True)
-        fname = 'centroids_yx.png'
+        fname = '%s/centroids_yx.png' % plotdir
         savefig(fname, bbox_inches='tight')
         print('Created ',fname)
 
@@ -456,7 +469,7 @@ if __name__ == '__main__':
                                    frames=len(debris_path.times),
                                    interval=200, blit=False)
 
-    fname_mp4 = 'polygon_BM1_config%s.mp4' % config
+    fname_mp4 = '%s/polygon_BM1_config%s.mp4' % (plotdir,config)
     fps = 5
     print('Making mp4...')
     animation_tools.make_mp4(anim, fname_mp4, fps)
