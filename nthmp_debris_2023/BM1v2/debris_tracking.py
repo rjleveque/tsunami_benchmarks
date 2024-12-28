@@ -21,7 +21,7 @@ class DebrisObject():
         self.advect = True  # passively advected?
         self.friction_static = 0.2
         self.friction_kinetic = 0.1
-        self.rho_water = 1000. # density of water (g/m^3)
+        self.rho_water = 1000. # density of water (kg/m^3)
         self.grav = 9.81  # gravitational acceleration
 
         self.z0 = [0.,0.,0.]  # location and orientation [x0,y0,theta0]

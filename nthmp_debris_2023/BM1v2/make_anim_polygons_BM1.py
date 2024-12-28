@@ -14,6 +14,15 @@ yplot = linspace(-2.95, 2.95, 60)
 Xplot,Yplot = meshgrid(xplot, yplot, indexing='ij')
 fgout_grid_extent = [33.75,43.75,-3,3]
 
+
+t0 = 34.
+nsteps = 221
+dt = 0.1
+times = arange(t0, t0+(nsteps+0.5)*dt, dt)
+frames = range(len(times))
+
+
+
 def track_debris(params):
     config = params['config']
     outdir = params['outdir']
@@ -201,11 +210,6 @@ def track_debris(params):
             #fgout_grid_extent = [33.75, 43.75, -3.0, 3.0]
 
 
-
-    t0 = 34.
-    nsteps = 221 #120 #221
-    dt = 0.1
-    times = arange(t0, t0+(nsteps+0.5)*dt, dt)
 
     debris_path_list = debris_tracking.make_debris_path_list(debris_list,
                                         z0_list,obst_list,domain,t0,dt,nsteps,
@@ -514,33 +518,16 @@ def make_animation(fig,update,frames,params):
 
 if __name__ == '__main__':
 
-    if 0:
-        print('Making anim...')
-        anim = animation.FuncAnimation(fig, update,
-                                       frames=len(debris_path.times),
-                                       interval=200, blit=False)
-
-        fname_mp4 = '%s/BM1_config%s.mp4' % (plotdir,config)
-        fps = 5
-        print('Making mp4...')
-        animation_tools.make_mp4(anim, fname_mp4, fps)
-
-        plot_frames()
-        centroids = plot_centroids(debris_path_list)
-
-        if use_sim_data:
-            print('USING SIM DATA')
-
     run_all = False
 
-    if 1 or run_all:
+    if 0 or run_all:
         params = {}
         params['config'] = 1
         params['outdir'] = 'sim_data'
         params['plotdir'] = 'BM1_config%i_simdata' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
     if 0 or run_all:
@@ -550,17 +537,17 @@ if __name__ == '__main__':
         params['plotdir'] = 'BM1_config%i_noblock' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
-    if 1 or run_all:
+    if 0 or run_all:
         params = {}
         params['config'] = 1
         params['outdir'] = '../BM1/SWE2d/_output_dtopo1'
         params['plotdir'] = 'BM1_config%i_dtopo1' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
 
@@ -571,7 +558,7 @@ if __name__ == '__main__':
         params['plotdir'] = 'BM1_config%i_simdata' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
     if 0 or run_all:
@@ -581,7 +568,7 @@ if __name__ == '__main__':
         params['plotdir'] = 'BM1_config%i_noblock' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
     if 0 or run_all:
@@ -591,7 +578,7 @@ if __name__ == '__main__':
         params['plotdir'] = 'BM1_config%i_dtopo4' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
     if 0 or run_all:
@@ -601,17 +588,18 @@ if __name__ == '__main__':
         params['plotdir'] = 'BM1_config%i_simdata' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
-    if 0 or run_all:
+    if 1 or run_all:
         params = {}
         params['config'] = 4
-        params['outdir'] = '../BM1/SWE2d/_output_block'
-        params['plotdir'] = 'BM1_config%i_block' % params['config']
+        params['outdir'] = '../BM1/SWE2d/_output_block_manning017'
+        params['plotdir'] = 'BM1_config%i_block_manning017' % params['config']
+        #params['plotdir'] = 'BM1_config%i_block_manning017_advect' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
     if 0 or run_all:
@@ -621,7 +609,7 @@ if __name__ == '__main__':
         params['plotdir'] = 'BM1_config%i_dtopo4_block' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
 
@@ -632,7 +620,7 @@ if __name__ == '__main__':
         params['plotdir'] = 'BM1_config%i_simdata' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
     if 0 or run_all:
@@ -642,7 +630,7 @@ if __name__ == '__main__':
         params['plotdir'] = 'BM1_config%i_block' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
 
     if 0 or run_all:
@@ -652,5 +640,5 @@ if __name__ == '__main__':
         params['plotdir'] = 'BM1_config%i_dtopo4_block' % params['config']
         fig,update,debris_path_list = track_debris(params)
         plot_frames(fig,update,params,n_list=None)
-        make_animation(fig,update,None,params)
+        make_animation(fig,update,frames,params)
         plot_centroids(debris_path_list,params)
