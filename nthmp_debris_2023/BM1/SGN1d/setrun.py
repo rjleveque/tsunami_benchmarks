@@ -252,7 +252,7 @@ def setrun(claw_pkg='geoclaw'):
     #   is supported in 1d.
 
     geo_data.friction_forcing = True
-    geo_data.manning_coefficient =.025
+    geo_data.manning_coefficient =.017
 
     geo_data.coordinate_system = 1  # linear distance (meters)
 

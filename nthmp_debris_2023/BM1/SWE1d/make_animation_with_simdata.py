@@ -30,8 +30,8 @@ with open('../sim_data.pickle','rb') as f:
 zeta_fcn = sim_data['zeta_fcn']  # function that interpolates zeta to (t,x)
 u_vel_fcn = sim_data['u_vel_fcn']  # function that interpolates u_vel to (t,x)
 
-outdir1 = '../SGN1d/_output'
-outdir2 = '_output'
+outdir1 = '../SGN1d/_output_manning017'
+outdir2 = '_output_manning017'
 format = 'ascii'  # format of fgout grid output
 
 fname_celledges = os.path.abspath('celledges.data')
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     # Output files:
     name = 'SGN_animation'
 
-    fname_mp4 = name + '.mp4'
+    fname_mp4 = name + 'manning017.mp4'
 
     fname_html = None
     #fname_html = name + '.html'
